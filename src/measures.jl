@@ -1,33 +1,17 @@
-# Extend Base.copy for new variable types
-Base.copy(v::MeasureRef, new_model::InfiniteModel) = MeasureRef(new_model,
-                                                                v.index)
-
-"""
-    JuMP.name(mref::MeasureRef)::String
-
-Extend [`JuMP.name`](@ref) to return the name associated with a measure
-reference.
-"""
-function JuMP.name(mref::MeasureRef)::String
+# JuMP.name for measure
+function JuMP.name(mref::InfOptVariableRef, ::Val{Measure})::String
     return JuMP.owner_model(mref).meas_to_name[mref.index]
 end
 
-"""
-    JuMP.set_name(mref::MeasureRef, name::String)
-
-Extend [`JuMP.set_name`](@ref) to specify the name of a measure reference.
-"""
-function JuMP.set_name(mref::MeasureRef, name::String)
+# JuMP.set_name for measure
+function JuMP.set_name(mref::InfOptVariableRef, ::Val{Measure}, name::String)
     JuMP.owner_model(mref).meas_to_name[JuMP.index(mref)] = name
     return
 end
 
-"""
-    JuMP.is_valid(model::InfiniteModel, mref::MeasureRef)::Bool
-
-Extend [`JuMP.is_valid`](@ref) to return `Bool` whether `mref` is valid.
-"""
-function JuMP.is_valid(model::InfiniteModel, mref::MeasureRef)::Bool
+# JuMP.is_valid for measures
+function JuMP.is_valid(model::InfiniteModel, mref::InfOptVariableRef,
+                       ::Val{Measure})::Bool
     return (model === JuMP.owner_model(mref) && JuMP.index(mref) in keys(model.measures))
 end
 
@@ -344,63 +328,22 @@ function measure(expr::JuMP.AbstractJuMPScalar,
     return add_measure(model, meas)
 end
 
-"""
-    used_by_constraint(mref::MeasureRef)::Bool
-
-Return a `Bool` indicating if `mref` is used by a constraint.
-
-**Example**
-```julia
-julia> used_by_constraint(mref)
-false
-```
-"""
-function used_by_constraint(mref::MeasureRef)::Bool
+# used_by_constraint for measure
+function used_by_constraint(mref::InfOptVariableRef, ::Val{Measure})::Bool
     return haskey(JuMP.owner_model(mref).meas_to_constrs, JuMP.index(mref))
 end
 
-"""
-    used_by_measure(mref::MeasureRef)::Bool
-
-Return a `Bool` indicating if `mref` is used by a measure.
-
-**Example**
-```julia
-julia> used_by_measure(mref)
-true
-```
-"""
-function used_by_measure(mref::MeasureRef)::Bool
+# used_by_measure for measure
+function used_by_measure(mref::InfOptVariableRef, ::Val{Measure})::Bool
     return haskey(JuMP.owner_model(mref).meas_to_meas, JuMP.index(mref))
 end
 
-"""
-    used_by_objective(vmref::MeasureRef)::Bool
-
-Return a `Bool` indicating if `mref` is used by the objective.
-
-**Example**
-```julia
-julia> used_by_objective(mref)
-true
-```
-"""
-function used_by_objective(mref::MeasureRef)::Bool
+function used_by_objective(mref::InfOptVariableRef, ::Val{Measure})::Bool
     return JuMP.owner_model(mref).meas_in_objective[JuMP.index(mref)]
 end
 
-"""
-    is_used(mref::MeasureRef)::Bool
-
-Return a `Bool` indicating if `mref` is used in the model.
-
-**Example**
-```julia
-julia> is_used(mref)
-true
-```
-"""
-function is_used(mref::MeasureRef)::Bool
+# is_used for measures
+function is_used(mref::InfOptVariableRef, ::Val{Measure})::Bool
     return used_by_measure(mref) || used_by_constraint(mref) || used_by_objective(mref)
 end
 
@@ -433,7 +376,8 @@ Subject to
  t in [0, 6]
 ```
 """
-function JuMP.delete(model::InfiniteModel, mref::MeasureRef)
+# JuMP.delete for measures
+function JuMP.delete(model::InfiniteModel, mref::InfOptVariableRef, ::Val{Measure})
     @assert JuMP.is_valid(model, mref) "Invalid measure reference."
     # Reset the transcription status
     if is_used(mref)

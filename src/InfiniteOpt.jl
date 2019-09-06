@@ -33,16 +33,17 @@ export InfiniteModel
 
 # Export macros and constants
 export @infinite_variable, @point_variable, @global_variable, @infinite_parameter,
-Infinite, Global, Point, Parameter
+Infinite, Global, Point, Parameter, Measure, Reduced
+
+# Export reference type
+export InfOptVariableRef
 
 # Export infinite parameter datatypes
-export InfOptParameter, ParameterRef
+export InfOptParameter
 
 # Export variable datatypes
 export InfOptVariable, InfiniteVariable, PointVariable, GlobalVariable,
-GeneralVariableRef, InfiniteVariableRef, MeasureFiniteVariableRef,
-FiniteVariableRef, PointVariableRef, GlobalVariableRef, InfOptVariableRef,
-ReducedInfiniteVariableRef, AbstractReducedInfo, ReducedInfiniteInfo
+AbstractReducedInfo, ReducedInfiniteInfo
 
 # Export infinite parameter set types
 export AbstractInfiniteSet, IntervalSet, DistributionSet
@@ -68,7 +69,7 @@ FiniteConstraintRef, BoundedScalarConstraint
 
 # Export measure datatypes
 export AbstractMeasureData, DiscreteMeasureData, MultiDiscreteMeasureData,
-Measure, MeasureRef
+Measure
 
 # Export measure methods
 export add_measure, measure, measure_function, measure_data, expand,

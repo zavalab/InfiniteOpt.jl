@@ -1,6 +1,7 @@
 # include("C:/Users/puls446/.julia/dev/InfOpt/examples/3node_flexible_design.jl")
 
-using Revise, InfiniteOpt, JuMP, Clp, Distributions
+#using Revise, InfiniteOpt, JuMP, Clp, Distributions
+using Revise, InfiniteOpt, JuMP, Gurobi, Distributions
 
 # Set the covariance matrix for the uncertain parameters
 θ_nom = [0.; 60.; 10.]
@@ -18,7 +19,8 @@ U = 10000
 num_samples = 100
 
 # Initialize the model
-m = InfiniteModel(with_optimizer(Clp.Optimizer))
+#m = InfiniteModel(with_optimizer(Clp.Optimizer))
+m = InfiniteModel(with_optimizer(Gurobi.Optimizer))
 
 # Set the uncertainty parameters
 dist = MvNormal(θ_nom, covar)

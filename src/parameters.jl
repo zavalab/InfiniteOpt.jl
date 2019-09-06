@@ -1,10 +1,9 @@
-# Define symbol inputs for different variable types
-const Parameter = :Parameter
+# Extend Base.copy for infinite parameters/variables etc.
 
-# Extend Base.copy for infinite parameters
-function Base.copy(p::ParameterRef, new_model::InfiniteModel)::ParameterRef
-    return ParameterRef(new_model, p.index)
+function Base.copy(v::InfOptVariableRef, new_model::InfiniteModel)::InfOptVariableRef
+    return InfOptVariableRef(new_model, v.index, variable_type(v))
 end
+
 
 # Internal structure for building InfOptParameters
 mutable struct _ParameterInfoExpr
@@ -120,7 +119,7 @@ end
 
 """
     build_parameter(_error::Function, set::AbstractInfiniteSet,
-                    [num_params::Int = 1;
+                    [num_params::Int64 = 1;
                     supports::Union{Number, Vector{<:Number}} = Number[],
                     independent::Bool = false])::InfOptParameter
 
@@ -137,7 +136,7 @@ InfOptParameter{IntervalSet}(IntervalSet(0.0, 3.0), [0, 1, 2, 3], false)
 ```
 """
 function build_parameter(_error::Function, set::AbstractInfiniteSet,
-                         num_params::Int = 1;
+                         num_params::Int64 = 1;
                          supports::Union{Number, Vector{<:Number}} = Number[],
                          independent::Bool = false,
                          extra_kw_args...)::InfOptParameter
@@ -162,10 +161,10 @@ end
 
 """
     add_parameter(model::InfiniteModel, p::InfOptParameter,
-                  name::String="")::ParameterRef
+                  name::String="")::InfOptVariableRef
 
-Returns a [`ParameterRef`](@ref) associated with the parameter `p` that is added
-to `model`. This adds a parameter to the model in a manner similar to
+Returns a [`InfOptVariableRef`](@ref) associated with the parameter `p` that is
+added to `model`. This adds a parameter to the model in a manner similar to
 `JuMP.add_variable`. This can be used to add parameters with the use of
 [`@infinite_parameter`](@ref). [`build_parameter`](@ref) should be used to
 construct `p`.
@@ -180,9 +179,9 @@ name
 ```
 """
 function add_parameter(model::InfiniteModel, p::InfOptParameter,
-                       name::String=""; macro_call = false)::ParameterRef
+                       name::String=""; macro_call = false)::InfOptVariableRef
     model.next_param_index += 1
-    pref = ParameterRef(model, model.next_param_index)
+    pref = InfOptVariableRef(model, model.next_param_index, Parameter)
     model.params[JuMP.index(pref)] = p
     if !macro_call
         model.next_param_id += 1
@@ -193,9 +192,9 @@ function add_parameter(model::InfiniteModel, p::InfOptParameter,
 end
 
 """
-    used_by_constraint(pref::ParameterRef)::Bool
+    used_by_constraint(ref::InfOptVariableRef)::Bool
 
-Return true if `pref` is used by a constraint or false otherwise.
+Return true if `ref` is used by a constraint or false otherwise.
 
 **Example**
 ```julia
@@ -203,14 +202,20 @@ julia> used_by_constraint(t)
 true
 ```
 """
-function used_by_constraint(pref::ParameterRef)::Bool
+# Function wrapper of used_by_constraint
+function used_by_constraint(ref::InfOptVariableRef)::Bool
+    return used_by_constraint(ref, Val(variable_type(ref)))
+end
+
+# used_by_constraint for parameters
+function used_by_constraint(pref::InfOptVariableRef, ::Val{Parameter})::Bool
     return haskey(JuMP.owner_model(pref).param_to_constrs, JuMP.index(pref))
 end
 
 """
-    used_by_measure(pref::ParameterRef)::Bool
+    used_by_measure(ref::InfOptVariableRef)::Bool
 
-Return true if `pref` is used by a measure or false otherwise.
+Return true if `ref` is used by a measure or false otherwise.
 
 **Example**
 ```julia
@@ -218,12 +223,16 @@ julia> used_by_measure(t)
 false
 ```
 """
-function used_by_measure(pref::ParameterRef)::Bool
+function used_by_measure(ref::InfOptVariableRef)::Bool
+    return used_by_measure(ref, Val(variable_type(ref)))
+end
+
+function used_by_measure(pref::InfOptVariableRef, ::Val{Parameter})::Bool
     return haskey(JuMP.owner_model(pref).param_to_meas, JuMP.index(pref))
 end
 
 """
-    used_by_variable(pref::ParameterRef)::Bool
+    used_by_variable(pref::InfOptVariableRef)::Bool
 
 Return true if `pref` is used by an infinite variable or false otherwise.
 
@@ -233,12 +242,16 @@ julia> used_by_variable(t)
 true
 ```
 """
-function used_by_variable(pref::ParameterRef)::Bool
+function used_by_variable(pref::InfOptVariableRef)::Bool
+    type = variable_type(pref)
+    if type != Parameter
+        error("pref must be a parameter reference.")
+    end
     return haskey(JuMP.owner_model(pref).param_to_vars, JuMP.index(pref))
 end
 
 """
-    is_used(pref::ParameterRef)::Bool
+    is_used(pref::InfOptVariableRef)::Bool
 
 Return true if `pref` is used in the model or false otherwise.
 
@@ -248,50 +261,80 @@ julia> is_used(t)
 true
 ```
 """
-function is_used(pref::ParameterRef)::Bool
+# Function wrapper for is_used
+function is_used(pref::InfOptVariableRef)::Bool
+    return is_used(pref, ::Val(variable_type(pref)))
+end
+
+# is_used for parameters
+function is_used(pref::InfOptVariableRef, ::Val{Parameter})::Bool
     return used_by_measure(pref) || used_by_constraint(pref) || used_by_variable(pref)
 end
 
 ## Check if parameter is used by measure data and error if it is to prevent bad
 ## deleting behavior
 # DiscreteMeasureData
-function _check_param_in_data(pref::ParameterRef, data::DiscreteMeasureData)
+function _check_param_in_data(pref::InfOptVariableRef, data::DiscreteMeasureData)
+    type = variable_type(pref)
+    if type != Parameter
+        error("pref must be a parameter reference.")
+    end
     data.parameter_ref == pref && error("Unable to delete $pref since it is " *
                                         "used to evaluate measures.")
     return
 end
 
 # MultiDiscreteMeasureData
-function _check_param_in_data(pref::ParameterRef, data::MultiDiscreteMeasureData)
+function _check_param_in_data(pref::InfOptVariableRef, data::MultiDiscreteMeasureData)
+    type = variable_type(pref)
+    if type != Parameter
+        error("pref must be a parameter reference.")
+    end
     pref in data.parameter_ref && error("Unable to delete $pref since it is " *
                                         "used to evaluate measures.")
     return
 end
 
 # Fallback
-function _check_param_in_data(pref::ParameterRef, data::T) where {T}
+function _check_param_in_data(pref::InfOptVariableRef, data::T) where {T}
+    type = variable_type(pref)
+    if type != Parameter
+        error("pref must be a parameter reference.")
+    end
     error("Unable to delete parameters when using measure data type $T.")
     return
 end
 
 ## Determine if a tuple element contains a particular parameter
-# ParameterRef
-function _contains_pref(search_pref::ParameterRef, pref::ParameterRef)::Bool
+# InfOptVariableRef
+function _contains_pref(search_pref::InfOptVariableRef, pref::InfOptVariableRef)::Bool
+    if variable_type(search_pref) != Parameter
+        error("search_pref must be a parameter reference.")
+    end
+    if variable_type(pref) != Parameter
+        error("pref must be a parameter reference.")
+    end
     return search_pref == pref
 end
 
 # SparseAxisArray
-function _contains_pref(arr::JuMPC.SparseAxisArray{<:ParameterRef},
-                        pref::ParameterRef)::Bool
+function _contains_pref(arr::JuMPC.SparseAxisArray{<:InfOptVariableRef},
+                        pref::InfOptVariableRef)::Bool
+    if variable_type(pref) != Parameter
+        error("pref must be a parameter reference.")
+    end
     return pref in collect(values(arr.data))
 end
 
 # Return parameter tuple without a particular parameter and return location of
 # where it was
-function _remove_parameter(prefs::Tuple, delete_pref::ParameterRef)::Tuple
+function _remove_parameter(prefs::Tuple, delete_pref::InfOptVariableRef)::Tuple
+    if variable_type(delete_pref) != Parameter
+        error("delete_pref must be a parameter reference.")
+    end
     for i = 1:length(prefs)
         if _contains_pref(prefs[i], delete_pref)
-            if isa(prefs[i], ParameterRef)
+            if variable_type(prefs[i]) == Parameter
                 return Tuple(prefs[j] for j = 1:length(prefs) if j != i), (i, )
             else
                 for (k, v) in prefs[i].data
@@ -313,12 +356,18 @@ function _remove_parameter(prefs::Tuple, delete_pref::ParameterRef)::Tuple
 end
 
 # Used to update infinite variable when one of its parameters is deleted
-function _update_infinite_variable(vref::InfiniteVariableRef, new_prefs::Tuple)
+function _update_infinite_variable(vref::InfOptVariableRef, new_prefs::Tuple)
+    _update_infinite_variable(vref, Val(variable_type(vref)), new_prefs)
+    return
+end
+
+function _update_infinite_variable(vref::InfOptVariableRef,
+                                   ::Val{Infinite}, new_prefs::Tuple)
     _update_variable_param_refs(vref, new_prefs)
     JuMP.set_name(vref, _root_name(vref))
     if used_by_measure(vref)
         for mindex in JuMP.owner_model(vref).var_to_meas[JuMP.index(vref)]
-            JuMP.set_name(MeasureRef(JuMP.owner_model(vref), mindex),
+            JuMP.set_name(InfOptVariableRef(JuMP.owner_model(vref), mindex, Val(MeasureRef)),
                        _make_meas_name(JuMP.owner_model(vref).measures[mindex]))
         end
     end
@@ -340,7 +389,13 @@ function _remove_parameter_values(pref_vals::Tuple, location::Tuple)::Tuple
 end
 
 # Update point variable for which a parameter is deleted
-function _update_point_variable(pvref::PointVariableRef, pref_vals::Tuple)
+function _update_point_variable(pvref::InfOptVariableRef, pref_vals::Tuple)
+    _update_point_variable(pvref, Val(variable_type(pvref)), pref_vals)
+    return
+end
+
+function _update_point_variable(pvref::InfOptVariableRef,
+                                ::Val{Point}, pref_vals::Tuple)
     _update_variable_param_values(pvref, pref_vals)
     # update name if no alias was provided
     if !isa(findfirst(isequal('('), JuMP.name(pvref)), Nothing)
@@ -348,7 +403,7 @@ function _update_point_variable(pvref::PointVariableRef, pref_vals::Tuple)
     end
     if used_by_measure(pvref)
         for mindex in JuMP.owner_model(pvref).var_to_meas[JuMP.index(pvref)]
-            JuMP.set_name(MeasureRef(JuMP.owner_model(pvref), mindex),
+            JuMP.set_name(InfOptVariableRef(JuMP.owner_model(pvref), mindex, Val(MeasureRef)),
                       _make_meas_name(JuMP.owner_model(pvref).measures[mindex]))
         end
     end
@@ -357,12 +412,15 @@ end
 
 # Update a reduced variable associated with an infinite variable whose parameter
 # was removed
-function _update_reduced_variable(vref::ReducedInfiniteVariableRef,
+function _update_reduced_variable(vref::InfOptVariableRef,
                                   location::Tuple)
+    if variable_type(vref) != Reduced
+        error("vref must be a reduced infinite variable reference.")
+    end
     eval_supps = eval_supports(vref)
     # removed parameter was a scalar
     if length(location) == 1
-        new_supports = Dict{Int, Union{Number, JuMPC.SparseAxisArray}}()
+        new_supports = Dict{Int64, Union{Number, JuMPC.SparseAxisArray}}()
         for (index, support) in eval_supps
             if index < location[1]
                 new_supports[index] = support
@@ -380,15 +438,20 @@ function _update_reduced_variable(vref::ReducedInfiniteVariableRef,
     end
     if used_by_measure(vref)
         for mindex in JuMP.owner_model(vref).reduced_to_meas[JuMP.index(vref)]
-            JuMP.set_name(MeasureRef(JuMP.owner_model(vref), mindex),
+            JuMP.set_name(InfOptVariableRef(JuMP.owner_model(vref), mindex, Val(MeasureRef)),
                        _make_meas_name(JuMP.owner_model(vref).measures[mindex]))
         end
     end
     return
 end
 
+# Function wrapper for JuMP.delete extension
+function JuMP.delete(model::InfiniteModel, ref::InfOptVariableRef)
+    return JuMP.delete(model, ref, Val(variable_type(ref)))
+end
+
 """
-    JuMP.delete(model::InfiniteModel, pref::ParameterRef)
+    JuMP.delete(model::InfiniteModel, pref::InfOptVariableRef, ::Val{Parameter})
 
 Extend [`JuMP.delete`](@ref) to delete infinite parameters and their
 dependencies. All variables, constraints, and measure functions that depend on
@@ -421,7 +484,8 @@ Subject to
  t in [0, 6]
 ```
 """
-function JuMP.delete(model::InfiniteModel, pref::ParameterRef)
+# JuMP.delete for parameters
+function JuMP.delete(model::InfiniteModel, pref::InfOptVariableRef, ::Val{Parameter})
     @assert JuMP.is_valid(model, pref) "Parameter reference is invalid."
     # update optimizer model status
     if is_used(pref)
@@ -435,13 +499,13 @@ function JuMP.delete(model::InfiniteModel, pref::ParameterRef)
         end
         # delete dependence of measures on pref
         for mindex in model.param_to_meas[JuMP.index(pref)]
-            if isa(model.measures[mindex].func, ParameterRef)
+            if variable_type(model.measures[mindex].func) == Parameter
                 model.measures[mindex] = Measure(zero(JuMP.AffExpr),
                                                  model.measures[mindex].data)
             else
                 _remove_variable(model.measures[mindex].func, pref)
             end
-            JuMP.set_name(MeasureRef(model, mindex),
+            JuMP.set_name(InfOptVariableRef(model, mindex, Val(MeasureRef)),
                           _make_meas_name(model.measures[mindex]))
         end
         # delete mapping
@@ -454,13 +518,13 @@ function JuMP.delete(model::InfiniteModel, pref::ParameterRef)
             # find location of parameter in storage tuple
             prefs, location = _remove_parameter(model.vars[vindex].parameter_refs,
                                                 pref)
-            vref = InfiniteVariableRef(model, vindex)
+            vref = InfOptVariableRef(model, vindex, Infinite)
             # remove the parameter dependence
             _update_infinite_variable(vref, prefs)
             # update any point variables that depend on vref accordingly
             if used_by_point_variable(vref)
                 for pindex in model.infinite_to_points[vindex]
-                    pvref = PointVariableRef(model, pindex)
+                    pvref = InfOptVariableRef(model, pindex, Point)
                     pref_vals = _remove_parameter_values(parameter_values(pvref),
                                                          location)
                     _update_point_variable(pvref, pref_vals)
@@ -481,7 +545,7 @@ function JuMP.delete(model::InfiniteModel, pref::ParameterRef)
     if used_by_constraint(pref)
         # update constraints in mapping to remove the parameter
         for cindex in model.param_to_constrs[JuMP.index(pref)]
-            if isa(model.constrs[cindex].func, ParameterRef)
+            if variable_type(model.constrs[cindex].func) == Parameter
                 model.constrs[cindex] = JuMP.ScalarConstraint(zero(JuMP.AffExpr),
                                                       model.constrs[cindex].set)
             else
@@ -499,29 +563,39 @@ function JuMP.delete(model::InfiniteModel, pref::ParameterRef)
 end
 
 """
-    JuMP.is_valid(model::InfiniteModel, pref::ParameterRef)::Bool
+JuMP.is_valid(model::InfiniteModel, pref::InfOptVariableRef)::Bool
 
 Extend the [`JuMP.is_valid`](@ref) function to accomodate infinite parameters.
-Returns true if the `InfiniteModel` stored in `pref` matches `model` and if
-the parameter index is used by `model`. It returns false otherwise.
+Returns true if the `InfiniteModel` stored in `ref` matches `model` and if
+    the index is used by `model`. It returns false otherwise.
 
-**Example**
-```julia
-julia> is_valid(model, t)
-true
-```
+    **Example**
+    ```julia
+    julia> is_valid(model, t)
+    true
+    ```
 """
-function JuMP.is_valid(model::InfiniteModel, pref::ParameterRef)::Bool
+
+# Function wrapper for JuMP.is_valid extension
+function JuMP.is_valid(model::InfiniteModel, ref::InfOptVariableRef)::Bool
+    return JuMP.is_valid(model::InfiniteModel,
+                         ref::InfOptVariableRef,
+                         ::variable_type(ref))
+end
+
+# JuMP.is_valid for parameters
+function JuMP.is_valid(model::InfiniteModel, pref::InfOptVariableRef,
+                       ::Val{Parameter})::Bool
     check1 = model === JuMP.owner_model(pref)
     check2 = JuMP.index(pref) in keys(model.params)
     return check1 && check2
 end
 
 """
-    JuMP.name(pref::ParameterRef)::String
+    JuMP.name(ref::InfOptVariableRef)::String
 
-Extend the `JuMP.name` function to accomodate infinite parameters. Returns the
-name string associated with `pref`.
+Extend the `JuMP.name` function to accomodate InfOptVariableRef.
+Returns the name string associated with `ref`.
 
 **Example**
 ```julia
@@ -529,15 +603,21 @@ julia> name(t)
 "t"
 ```
 """
-function JuMP.name(pref::ParameterRef)::String
+# function wrapper for all JuMP.name functions
+function JuMP.name(ref::InfOptVariableRef)::String
+    return JuMP.name(ref, Val(variable_type(ref)))
+end
+
+# JuMP.name for parameter
+function JuMP.name(pref::InfOptVariableRef, ::Val{Parameter})::String
     return JuMP.owner_model(pref).param_to_name[JuMP.index(pref)]
 end
 
 """
-    JuMP.set_name(pref::ParameterRef, name::String)
+    JuMP.set_name(ref::InfOptVariableRef, name::String)
 
-Extend the `JuMP.set_name` function to accomodate infinite parameters. Set a new
-base name to be associated with `pref`.
+Extend the `JuMP.set_name` function to accomodate `InfOptVariableRef`. Set a new
+base name to be associated with `ref`.
 
 **Example**
 ```julia
@@ -547,14 +627,21 @@ julia> name(t)
 "time"
 ```
 """
-function JuMP.set_name(pref::ParameterRef, name::String)
+
+# Function wrapper for JuMP.set_name
+function JuMP.set_name(ref::InfOptVariableRef, name::String)
+    JuMP.set_name(ref, Val(variable_type(ref)), name)
+end
+
+# JuMP.set_name for parameter
+function JuMP.set_name(pref::InfOptVariableRef, ::Val{Parameter}, name::String)
     JuMP.owner_model(pref).param_to_name[JuMP.index(pref)] = name
     JuMP.owner_model(pref).name_to_param = nothing
     return
 end
 
 """
-    num_parameters(model::InfiniteModel)::Int
+    num_parameters(model::InfiniteModel)::Int64
 
 Return the number of infinite parameters currently present in `model`.
 
@@ -564,14 +651,14 @@ julia> num_parameters(model)
 1
 ```
 """
-function num_parameters(model::InfiniteModel)::Int
+function num_parameters(model::InfiniteModel)::Int64
     return length(model.params)
 end
 
 # Internal functions
-_parameter_set(pref::ParameterRef) = JuMP.owner_model(pref).params[JuMP.index(pref)].set
-_parameter_supports(pref::ParameterRef) = JuMP.owner_model(pref).params[JuMP.index(pref)].supports
-function _update_parameter_set(pref::ParameterRef, set::AbstractInfiniteSet)
+_parameter_set(pref::InfOptVariableRef) = JuMP.owner_model(pref).params[JuMP.index(pref)].set
+_parameter_supports(pref::InfOptVariableRef) = JuMP.owner_model(pref).params[JuMP.index(pref)].supports
+function _update_parameter_set(pref::InfOptVariableRef, set::AbstractInfiniteSet)
     supports = JuMP.owner_model(pref).params[JuMP.index(pref)].supports
     independent = JuMP.owner_model(pref).params[JuMP.index(pref)].independent
     JuMP.owner_model(pref).params[JuMP.index(pref)] = InfOptParameter(set, supports, independent)
@@ -580,7 +667,7 @@ function _update_parameter_set(pref::ParameterRef, set::AbstractInfiniteSet)
     end
     return
 end
-function _update_parameter_supports(pref::ParameterRef, supports::Vector{<:Number})
+function _update_parameter_supports(pref::InfOptVariableRef, supports::Vector{<:Number})
     set = JuMP.owner_model(pref).params[JuMP.index(pref)].set
     independent = JuMP.owner_model(pref).params[JuMP.index(pref)].independent
     JuMP.owner_model(pref).params[JuMP.index(pref)] = InfOptParameter(set, supports, independent)
@@ -591,7 +678,7 @@ function _update_parameter_supports(pref::ParameterRef, supports::Vector{<:Numbe
 end
 
 """
-    infinite_set(pref::ParameterRef)::AbstractInfiniteSet
+    infinite_set(pref::InfOptVariableRef)::AbstractInfiniteSet
 
 Return the infinite set associated with `pref`.
 
@@ -601,12 +688,12 @@ julia> infinite_set(t)
 IntervalSet(0.0, 3.0)
 ```
 """
-function infinite_set(pref::ParameterRef)::AbstractInfiniteSet
+function infinite_set(pref::InfOptVariableRef)::AbstractInfiniteSet
     return _parameter_set(pref)
 end
 
 """
-    set_infinite_set(pref::ParameterRef, set::AbstractInfiniteSet)
+    set_infinite_set(pref::InfOptVariableRef, set::AbstractInfiniteSet)
 
 Specify the infinite set of `pref`.
 
@@ -618,16 +705,16 @@ julia> infinite_set(t)
 IntervalSet(0.0, 1.0)
 ```
 """
-function set_infinite_set(pref::ParameterRef, set::AbstractInfiniteSet)
+function set_infinite_set(pref::InfOptVariableRef, set::AbstractInfiniteSet)
     _update_parameter_set(pref, set)
     return
 end
 
 """
-    JuMP.has_lower_bound(pref::ParameterRef)::Bool
+    JuMP.has_lower_bound(ref::InfOptVariableRef)::Bool
 
-Extend the `JuMP.has_lower_bound` function to accomodate infinite parameters.
-Return true if the set associated with `pref` has a defined lower bound or if a
+Extend the `JuMP.has_lower_bound` function to accomodate InfOptVariableRef.
+Return true if the set associated with `ref` has a defined lower bound or if a
 lower bound can be found.
 
 **Example**
@@ -636,7 +723,13 @@ julia> has_lower_bound(t)
 true
 ```
 """
-function JuMP.has_lower_bound(pref::ParameterRef)::Bool
+# Function wrapper for JuMP.has_lower_bound
+function JuMP.has_lower_bound(ref::InfOptVariableRef)::Bool
+    return JuMP.has_lower_bound(ref, Val(variable_type(ref)))
+end
+
+# JuMP.has_lower_bound for parameters
+function JuMP.has_lower_bound(pref::InfOptVariableRef, ::Val{Parameter})::Bool
     set = _parameter_set(pref)
     if isa(set, IntervalSet)
         return true
@@ -653,9 +746,9 @@ function JuMP.has_lower_bound(pref::ParameterRef)::Bool
 end
 
 """
-    JuMP.lower_bound(pref::ParameterRef)::Number
+    JuMP.lower_bound(ref::InfOptVariableRef)::Number
 
-Extend the `JuMP.lower_bound` function to accomodate infinite parameters.
+Extend the `JuMP.lower_bound` function to accomodate InfOptVariableRef.
 Returns the lower bound associated with the infinite set. Errors if such a bound
 is not well-defined.
 
@@ -665,7 +758,14 @@ julia> lower_bound(t)
 0.0
 ```
 """
-function JuMP.lower_bound(pref::ParameterRef)::Number
+
+# Function wrapper for JuMP.lower_bound
+function JuMP.lower_bound(ref::InfOptVariableRef)::Number
+    return JuMP.lower_bound(ref, Val(variable_type(ref)))
+end
+
+# JuMP.lower_bound for parameters
+function JuMP.lower_bound(pref::InfOptVariableRef, ::Val{Parameter})::Number
     set = _parameter_set(pref)
     if !JuMP.has_lower_bound(pref)
         error("Parameter $(pref) does not have a lower bound.")
@@ -678,11 +778,11 @@ function JuMP.lower_bound(pref::ParameterRef)::Number
 end
 
 """
-    JuMP.set_lower_bound(pref::ParameterRef, lower::Number)
+    JuMP.set_lower_bound(ref::InfOptVariableRef, lower::Number)
 
-Extend the `JuMP.set_lower_bound` function to accomodate infinite parameters.
-Updates the infinite set lower bound if and only if it is an IntervalSet. Errors
-otherwise.
+Extend the `JuMP.set_lower_bound` function to accomodate infinite parameters and
+variables. Updates the infinite set lower bound if and only if it is an
+IntervalSet. Errors otherwise.
 
 **Example**
 ```julia
@@ -692,7 +792,13 @@ julia> lower_bound(t)
 -1.0
 ```
 """
-function JuMP.set_lower_bound(pref::ParameterRef, lower::Number)
+# Function wrapper for JuMP.set_lower_bound
+function JuMP.set_lower_bound(ref::InfOptVariableRef, lower::Number)
+    JuMP.set_lower_bound(ref, Val(variable_type(ref)), lower)
+end
+
+function JuMP.set_lower_bound(pref::InfOptVariableRef, ::Val{Parameter},
+                              lower::Number)
     set = _parameter_set(pref)
     if isa(set, DistributionSet)
         error("Cannot set the lower bound of a distribution, try using " *
@@ -705,11 +811,11 @@ function JuMP.set_lower_bound(pref::ParameterRef, lower::Number)
 end
 
 """
-    JuMP.has_upper_bound(pref::ParameterRef)::Bool
+    JuMP.has_upper_bound(ref::InfOptVariableRef)::Bool
 
-Extend the `JuMP.has_upper_bound` function to accomodate infinite parameters.
-Return true if the set associated with `pref` has a defined upper bound or if a
-upper bound can be found.
+Extend the `JuMP.has_upper_bound` function to accomodate infinite parameters and
+variables. Return true if the set associated with `ref` has a defined upper
+bound or if an upper bound can be found.
 
 **Example**
 ```julia
@@ -717,7 +823,13 @@ julia> has_upper_bound(t)
 true
 ```
 """
-function JuMP.has_upper_bound(pref::ParameterRef)::Bool
+# Function wrapper for JuMP.has_upper_bound
+function JuMP.has_upper_bound(ref::InfOptVariableRef)::Bool
+    return JuMP.has_upper_bound(ref, Val(variable_type(ref)))
+end
+
+# JuMP.has_upper_bound for parameters
+function JuMP.has_upper_bound(pref::InfOptVariableRef, ::Val{Parameter})::Bool
     set = _parameter_set(pref)
     if isa(set, IntervalSet)
         return true
@@ -734,11 +846,11 @@ function JuMP.has_upper_bound(pref::ParameterRef)::Bool
 end
 
 """
-    JuMP.upper_bound(pref::ParameterRef)::Number
+    JuMP.upper_bound(pref::InfOptVariableRef)::Number
 
-Extend the `JuMP.upper_bound` function to accomodate infinite parameters.
-Returns the upper bound associated with the infinite set. Errors if such a bound
-is not well-defined.
+Extend the `JuMP.upper_bound` function to accomodate infinite parameters and
+variables. Returns the upper bound associated with the infinite set. Errors if
+such a bound is not well-defined.
 
 **Example**
 ```julia
@@ -746,7 +858,13 @@ julia> upper_bound(t)
 1.0
 ```
 """
-function JuMP.upper_bound(pref::ParameterRef)::Number
+# Function wrapper for JuMP.upper_bound
+function JuMP.upper_bound(ref::InfOptVariableRef)::Number
+    return JuMP.upper_bound(ref, variable_type(ref))
+end
+
+# JuMP.upper_bound for parameters
+function JuMP.upper_bound(pref::InfOptVariableRef, ::Val{Parameter})::Number
     set = _parameter_set(pref)
     if !JuMP.has_upper_bound(pref)
         error("Parameter $(pref) does not have a upper bound.")
@@ -759,11 +877,11 @@ function JuMP.upper_bound(pref::ParameterRef)::Number
 end
 
 """
-    JuMP.set_upper_bound(pref::ParameterRef, lower::Number)
+    JuMP.set_upper_bound(pref::InfOptVariableRef, lower::Number)
 
-Extend the `JuMP.set_upper_bound` function to accomodate infinite parameters.
-Updates the infinite set upper bound if and only if it is an IntervalSet. Errors
-otherwise.
+Extend the `JuMP.set_upper_bound` function to accomodate infinite parameters and
+variables. Updates the infinite set upper bound if and only if it is an
+IntervalSet. Errors otherwise.
 
 **Example**
 ```julia
@@ -773,7 +891,13 @@ julia> upper_bound(t)
 2.0
 ```
 """
-function JuMP.set_upper_bound(pref::ParameterRef, upper::Number)
+# Function wrapper for JuMP.set_upper_bound
+function JuMP.set_upper_bound(ref::InfOptVariableRef, upper::Number)
+    JuMP.set_upper_bound(ref, Val(variable_type(ref)), upper)
+end
+
+# JuMP.set_upper_bound for parameter
+function JuMP.set_upper_bound(pref::InfOptVariableRef, ::Val{Parameter}, upper::Number)
     set = _parameter_set(pref)
     if isa(set, DistributionSet)
         error("Cannot set the upper bound of a distribution, try using " *
@@ -786,7 +910,7 @@ function JuMP.set_upper_bound(pref::ParameterRef, upper::Number)
 end
 
 """
-    num_supports(pref::ParameterRef)::Int
+    num_supports(pref::InfOptVariableRef)::Int64
 
 Return the number of support points associated with `pref`.
 
@@ -796,12 +920,12 @@ julia> num_supports(t)
 1
 ```
 """
-function num_supports(pref::ParameterRef)::Int
+function num_supports(pref::InfOptVariableRef)::Int64
     return length(_parameter_supports(pref))
 end
 
 """
-    has_supports(pref::ParameterRef)::Bool
+    has_supports(pref::InfOptVariableRef)::Bool
 
 Return true if `pref` has supports or false otherwise.
 
@@ -811,10 +935,10 @@ julia> has_supports(t)
 true
 ```
 """
-has_supports(pref::ParameterRef)::Bool = num_supports(pref) > 0
+has_supports(pref::InfOptVariableRef)::Bool = num_supports(pref) > 0
 
 """
-    supports(pref::ParameterRef)::Vector
+    supports(pref::InfOptVariableRef)::Vector
 
 Return the support points associated with `pref`. Errors if there are no
 supports.
@@ -826,13 +950,13 @@ julia> supports(t)
  1
 ```
 """
-function supports(pref::ParameterRef)::Vector
+function supports(pref::InfOptVariableRef)::Vector
     !has_supports(pref) && error("Parameter $pref does not have supports.")
     return _parameter_supports(pref)
 end
 
 """
-    supports(prefs::AbstractArray{<:ParameterRef})::Vector
+    supports(prefs::AbstractArray{<:InfOptVariableRef})::Vector
 
 Return the support points associated with an array of `prefs` formatted as a
 vector of SparseAxisArrays following the format of the input array. If the
@@ -850,7 +974,7 @@ large number of combinations.
 ```julia
 julia> x = @infinite_parameter(model, [i = 1:2], set = IntervalSet(-1, 1),
                                base_name = "x", independent = true)
-2-element Array{ParameterRef,1}:
+2-element Array{InfOptVariableRef,1}:
  x[1]
  x[2]
 
@@ -870,7 +994,7 @@ julia> supports(x)
   [1]  =  1
 ```
 """
-function supports(prefs::AbstractArray{<:ParameterRef})::Vector
+function supports(prefs::AbstractArray{<:InfOptVariableRef})::Vector
     prefs = convert(JuMPC.SparseAxisArray, prefs)
     !_only_one_group(prefs) && error("Array contains parameters from multiple" *
                                      " groups.")
@@ -901,7 +1025,7 @@ function supports(prefs::AbstractArray{<:ParameterRef})::Vector
 end
 
 """
-    set_supports(pref::ParameterRef, supports::Vector{<:Number})
+    set_supports(pref::InfOptVariableRef, supports::Vector{<:Number})
 
 Specify the support points for `pref`. Errors if the supports violate the bounds
 associated with the infinite set. Warns if the points are not unique. Note that
@@ -917,7 +1041,7 @@ julia> supports(t)
  1
 ```
 """
-function set_supports(pref::ParameterRef, supports::Vector{<:Number})
+function set_supports(pref::InfOptVariableRef, supports::Vector{<:Number})
     set = _parameter_set(pref)
     _check_supports_in_bounds(error, supports, set)
     unique_supports = sort(unique(supports))
@@ -929,7 +1053,7 @@ function set_supports(pref::ParameterRef, supports::Vector{<:Number})
 end
 
 """
-    add_supports(pref::ParameterRef, supports::Union{Number, Vector{<:Number}})
+    add_supports(pref::InfOptVariableRef, supports::Union{Number, Vector{<:Number}})
 
 Add additional support points for `pref`.
 
@@ -953,7 +1077,7 @@ julia> supports(t)
  1.0
 ```
 """
-function add_supports(pref::ParameterRef, supports::Union{Number,
+function add_supports(pref::InfOptVariableRef, supports::Union{Number,
                                                           Vector{<:Number}})
     set = _parameter_set(pref)
     _check_supports_in_bounds(error, supports, set)
@@ -963,7 +1087,7 @@ function add_supports(pref::ParameterRef, supports::Union{Number,
 end
 
 """
-    delete_supports(pref::ParameterRef)
+    delete_supports(pref::InfOptVariableRef)
 
 Delete the support points for `pref`.
 
@@ -975,13 +1099,13 @@ julia> supports(t)
 ERROR: Parameter test does not have supports.
 ```
 """
-function delete_supports(pref::ParameterRef)
+function delete_supports(pref::InfOptVariableRef)
     _update_parameter_supports(pref, Number[])
     return
 end
 
 """
-    group_id(pref::ParameterRef)::Int
+    group_id(pref::InfOptVariableRef)::Int64
 
 Return the group ID number for `pref`.
 
@@ -991,12 +1115,12 @@ julia> group_id(t)
 1
 ```
 """
-function group_id(pref::ParameterRef)::Int
+function group_id(pref::InfOptVariableRef)::Int64
     return JuMP.owner_model(pref).param_to_group_id[JuMP.index(pref)]
 end
 
 """
-    group_id(prefs::AbstractArray{<:ParameterRef})::Int
+    group_id(prefs::AbstractArray{<:InfOptVariableRef})::Int64
 
 Return the group ID number for a group of `prefs`. Error if contains multiple
 groups.
@@ -1007,7 +1131,7 @@ julia> group_id([x[1], x[2]])
 2
 ```
 """
-function group_id(prefs::AbstractArray{<:ParameterRef})::Int
+function group_id(prefs::AbstractArray{<:InfOptVariableRef})::Int64
     groups = group_id.(prefs)
     length(unique(groups)) != 1 && error("Array contains parameters from " *
                                          "multiple groups.")
@@ -1015,7 +1139,7 @@ function group_id(prefs::AbstractArray{<:ParameterRef})::Int
 end
 
 """
-    is_independent(pref::ParameterRef)::Bool
+    is_independent(pref::InfOptVariableRef)::Bool
 
 Returns true for `pref` if it is independent or false otherwise.
 
@@ -1025,12 +1149,12 @@ julia> is_independent(t)
 false
 ```
 """
-function is_independent(pref::ParameterRef)::Bool
+function is_independent(pref::InfOptVariableRef)::Bool
     return JuMP.owner_model(pref).params[JuMP.index(pref)].independent
 end
 
 """
-    set_independent(pref::ParameterRef)
+    set_independent(pref::InfOptVariableRef)
 
 Specify that `pref` be independent.
 
@@ -1042,7 +1166,7 @@ julia> is_independent(t)
 true
 ```
 """
-function set_independent(pref::ParameterRef)
+function set_independent(pref::InfOptVariableRef)
     old_param = JuMP.owner_model(pref).params[JuMP.index(pref)]
     new_param = InfOptParameter(old_param.set, old_param.supports, true)
     JuMP.owner_model(pref).params[JuMP.index(pref)] = new_param
@@ -1050,7 +1174,7 @@ function set_independent(pref::ParameterRef)
 end
 
 """
-    unset_independent(pref::ParameterRef)
+    unset_independent(pref::InfOptVariableRef)
 
 Specify that `pref` be not independent.
 
@@ -1062,7 +1186,7 @@ julia> is_independent(t)
 false
 ```
 """
-function unset_independent(pref::ParameterRef)
+function unset_independent(pref::InfOptVariableRef)
     old_param = JuMP.owner_model(pref).params[JuMP.index(pref)]
     new_param = InfOptParameter(old_param.set, old_param.supports, false)
     JuMP.owner_model(pref).params[JuMP.index(pref)] = new_param
@@ -1070,7 +1194,7 @@ function unset_independent(pref::ParameterRef)
 end
 
 """
-    parameter_by_name(model::InfiniteModel, name::String)::Union{ParameterRef,
+    parameter_by_name(model::InfiniteModel, name::String)::Union{InfOptVariableRef,
                                                                  Nothing}
 
 Return the parameter reference assoociated with a parameter name. Errors if
@@ -1083,10 +1207,10 @@ t
 ```
 """
 function parameter_by_name(model::InfiniteModel,
-                           name::String)::Union{ParameterRef, Nothing}
+                           name::String)::Union{InfOptVariableRef, Nothing}
     if model.name_to_param === nothing
         # Inspired from MOI/src/Utilities/model.jl
-        model.name_to_param = Dict{String, Int}()
+        model.name_to_param = Dict{String, Int64}()
         for (param, param_name) in model.param_to_name
             if haskey(model.name_to_param, param_name)
                 # -1 is a special value that means this string does not map to
@@ -1103,31 +1227,31 @@ function parameter_by_name(model::InfiniteModel,
     elseif index == -1
         error("Multiple parameters have the name $name.")
     else
-        return ParameterRef(model, index)
+        return InfOptVariableRef(model, index, Parameter)
     end
     return
 end
 
 """
-    all_parameters(model::InfiniteModel)::Vector{ParameterRef}
+    all_parameters(model::InfiniteModel)::Vector{InfOptVariableRef}
 
 Return all of the infinite parameter references currently in `model`.
 
 **Example**
 ```julia
 julia> all_parameters(model)
-3-element Array{ParameterRef,1}:
+3-element Array{InfOptVariableRef,1}:
  t
  x[1]
  x[2]
 ```
 """
-function all_parameters(model::InfiniteModel)::Vector{ParameterRef}
-    pref_list = Vector{ParameterRef}(undef, num_parameters(model))
+function all_parameters(model::InfiniteModel)::Vector{InfOptVariableRef}
+    pref_list = Vector{InfOptVariableRef}(undef, num_parameters(model))
     indexes = sort([index for index in keys(model.params)])
     counter = 1
     for index in indexes
-        pref_list[counter] = ParameterRef(model, index)
+        pref_list[counter] = InfOptVariableRef(model, index, Parameter)
         counter += 1
     end
     return pref_list
@@ -1135,7 +1259,7 @@ end
 
 ## Define functions to extract the names of parameters
 # Extract the root name of a parameter reference
-function _root_name(pref::ParameterRef)::String
+function _root_name(pref::InfOptVariableRef)::String
     name = JuMP.name(pref)
     first_bracket = findfirst(isequal('['), name)
     if first_bracket == nothing
@@ -1156,30 +1280,30 @@ function _root_names(prefs::Tuple)::Tuple
 end
 
 ## Internal functions for group checking
-# Return group id of ParameterRef
-function _group(pref::ParameterRef)::Int
+# Return group id of parameter
+function _group(pref::InfOptVariableRef)::Int64
     return group_id(pref)
 end
 
 # Return the group if of the first element in an array (assuming all same)
-function _group(arr::AbstractArray{<:ParameterRef})::Int
+function _group(arr::AbstractArray{<:InfOptVariableRef})::Int64
     return group_id(first(arr))
 end
 
 # Return true if SparseAxisArray only has one group
-function _only_one_group(arr::JuMPC.SparseAxisArray{<:ParameterRef})::Bool
+function _only_one_group(arr::JuMPC.SparseAxisArray{<:InfOptVariableRef})::Bool
     return length(unique(group_id.(arr))) == 1
 end
 
 # Return true to have one group ID since is singular
-_only_one_group(pref::ParameterRef)::Bool = true
+_only_one_group(pref::InfOptVariableRef)::Bool = true
 
 ## Internal function for extracting parameter references
 # Return a vector of parameter references from a tuple of references
 function _list_parameter_refs(prefs::Tuple)
-    list = ParameterRef[]
+    list = InfOptVariableRef[]
     for pref in prefs
-        if isa(pref, ParameterRef)
+        if variable_type(pref) == Parameter
             push!(list, pref)
         else
             for k in keys(pref.data)

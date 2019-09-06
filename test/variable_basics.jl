@@ -3,22 +3,24 @@
     # initialize models and references
     m = InfiniteModel()
     m2 = InfiniteModel()
-    ivref = InfiniteVariableRef(m, 1)
-    pvref = PointVariableRef(m, 2)
-    gvref = GlobalVariableRef(m, 3)
-    pref = ParameterRef(m, 1)
+    ivref = InfOptVariableRef(m, 1, Infinite)
+    pvref = InfOptVariableRef(m, 2, Point)
+    gvref = InfOptVariableRef(m, 3, Global)
+    pref = InfOptVariableRef(m, 1, Parameter)
     # variable compare
     @testset "(==)" begin
         @test ivref == ivref
         @test pvref == pvref
         @test gvref == gvref
-        @test ivref == InfiniteVariableRef(m, 1)
-        @test pvref == PointVariableRef(m, 2)
-        @test gvref == GlobalVariableRef(m, 3)
-        @test !(ivref == InfiniteVariableRef(m, 2))
-        @test !(ivref == InfiniteVariableRef(m2, 1))
-        @test !(ivref != InfiniteVariableRef(m, 1))
+        @test ivref == InfOptVariableRef(m, 1, Infinite)
+        @test pvref == InfOptVariableRef(m, 2, Point)
+        @test gvref == InfOptVariableRef(m, 3, Global)
+        @test !(ivref == InfOptVariableRef(m, 2, Infinite))
+        @test !(ivref == InfOptVariableRef(m2, 1, Infinite))
+        @test !(ivref == InfOptVariableRef(m, 1, Global))
+        @test !(ivref != InfOptVariableRef(m, 1, Infinite))
         @test !(pref == ivref)
+        @test !(ivref == pvref)
     end
     # copy(v)
     @testset "copy(v)" begin
@@ -28,15 +30,15 @@
     end
     # copy(v, m)
     @testset "copy(v, m)" begin
-        @test copy(ivref, m2) == InfiniteVariableRef(m2, 1)
-        @test copy(pvref, m2) == PointVariableRef(m2, 2)
-        @test copy(gvref, m2) == GlobalVariableRef(m2, 3)
+        @test copy(ivref, m2) == InfOptVariableRef(m2, 1, Infinite)
+        @test copy(pvref, m2) == InfOptVariableRef(m2, 2, Point)
+        @test copy(gvref, m2) == InfOptVariableRef(m2, 3, Global)
     end
     # broadcastable
     @testset "broadcastable" begin
-        @test isa(Base.broadcastable(ivref), Base.RefValue{InfiniteVariableRef})
-        @test isa(Base.broadcastable(pvref), Base.RefValue{PointVariableRef})
-        @test isa(Base.broadcastable(gvref), Base.RefValue{GlobalVariableRef})
+        @test isa(Base.broadcastable(ivref), Base.RefValue{InfOptVariableRef})
+        @test isa(Base.broadcastable(pvref), Base.RefValue{InfOptVariableRef})
+        @test isa(Base.broadcastable(gvref), Base.RefValue{InfOptVariableRef})
     end
 end
 
@@ -45,17 +47,17 @@ end
     # initialize models and references
     m = InfiniteModel()
     m2 = InfiniteModel()
-    ivref = InfiniteVariableRef(m, 1)
-    pvref = PointVariableRef(m, 2)
-    gvref = GlobalVariableRef(m, 3)
-    pref = ParameterRef(m, 1)
+    ivref = InfOptVariableRef(m, 1, Infinite)
+    pvref = InfOptVariableRef(m, 2, Point)
+    gvref = InfOptVariableRef(m, 3, Global)
+    pref = InfOptVariableRef(m, 1, Parameter)
     # isequal_canonical
     @testset "JuMP.isequal_canonical" begin
         @test isequal_canonical(ivref, ivref)
         @test isequal_canonical(pvref, pvref)
         @test isequal_canonical(gvref, gvref)
-        @test !isequal_canonical(ivref, InfiniteVariableRef(m2, 1))
-        @test !isequal_canonical(ivref, InfiniteVariableRef(m, 2))
+        @test !isequal_canonical(ivref, InfOptVariableRef(m2, 1, Infinite))
+        @test !isequal_canonical(ivref, InfOptVariableRef(m, 2, Infinite))
     end
     # variable_type(m)
     @testset "JuMP.variable_type(m)" begin
@@ -63,11 +65,13 @@ end
     end
     # variable_type(m, t)
     @testset "JuMP.variable_type(m, t)" begin
-        @test variable_type(m, Infinite) == InfiniteVariableRef
-        @test variable_type(m, Point) == PointVariableRef
-        @test variable_type(m, Global) == GlobalVariableRef
-        @test variable_type(m, Parameter) == ParameterRef
-        @test_throws ErrorException variable_type(m, :bad)
+        @test JuMP.variable_type(m, Infinite) == InfOptVariableRef
+        @test JuMP.variable_type(m, Point) == InfOptVariableRef
+        @test JuMP.variable_type(m, Global) == InfOptVariableRef
+        @test JuMP.variable_type(m, Parameter) == InfOptVariableRef
+        @test_throws ErrorException JuMP.variable_type(m, Reduced)
+        @test_throws ErrorException JuMP.variable_type(m, Measure)
+        @test_throws ErrorException JuMP.variable_type(m, :bad)
     end
 end
 
@@ -75,7 +79,7 @@ end
 @testset "Basic Reference Queries" begin
     # initialize model and infinite variable
     m = InfiniteModel()
-    ivref = InfiniteVariableRef(m, 1)
+    ivref = InfOptVariableRef(m, 1, Infinite)
     info = VariableInfo(false, 0, false, 0, false, 0, false, 0, false, false)
     param = InfOptParameter(IntervalSet(0, 1), Number[], false)
     pref = add_parameter(m, param, "test")
@@ -92,6 +96,6 @@ end
     @testset "JuMP.is_valid" begin
         @test is_valid(m, ivref)
         @test !is_valid(InfiniteModel(), ivref)
-        @test !is_valid(m, InfiniteVariableRef(m, 5))
+        @test !is_valid(m, InfOptVariableRef(m, 5, Infinite))
     end
 end

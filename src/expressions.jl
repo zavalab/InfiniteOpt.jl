@@ -10,6 +10,7 @@ function _var_type_parser(V::T, W::T) where {T<:Type{<:ParameterRef}}
     return ParameterRef
 end
 
+#=
 # InfiniteVariableRef
 function _var_type_parser(V::T, W::T) where {T<:Type{<:InfiniteVariableRef}}
     return InfiniteVariableRef
@@ -24,17 +25,25 @@ end
 function _var_type_parser(V::T, W::T) where {T<:Type{<:GlobalVariableRef}}
     return GlobalVariableRef
 end
+=#
+
+# InfOptVariableRef
+function _var_type_parser(V::T, W::T) where {T<:Type{<:InfOptVariableRef}}
+    return InfOptVariableRef
+end
 
 # ReducedInfiniteVariableRef
 function _var_type_parser(V::T, W::T) where {T<:Type{<:ReducedInfiniteVariableRef}}
     return ReducedInfiniteVariableRef
 end
 
+#=
 # FiniteVariableRef
 function _var_type_parser(V::Type{<:FiniteVariableRef},
                           W::Type{<:FiniteVariableRef})
     return FiniteVariableRef
 end
+=#
 
 # MeasureFiniteVariableRef
 function _var_type_parser(V::Type{<:MeasureFiniteVariableRef},
@@ -99,6 +108,8 @@ function JuMP.destructive_add!(ex::Z, c::C, x::V
     type = _var_type_parser(Z, V)
     return JuMP.GenericAffExpr{C, type}(0.0, ex => 1.0, x => JuMP._float(c))
 end
+
+## Delete everything above here
 
 ## Extend for better comparisons than default
 # GenericAffExpr

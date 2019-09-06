@@ -8,7 +8,7 @@
     pref = add_parameter(m, param)
     var = InfiniteVariable(info, (pref,))
     m.vars[1] = var
-    vref = InfiniteVariableRef(m, 1)
+    vref = InfOptVariableRef(m, 1, Infinite)
     # _variable_info
     @testset "_variable_info" begin
         @test InfiniteOpt._variable_info(vref) == info
@@ -23,7 +23,7 @@
         # initialize point variable
         var = PointVariable(info, vref, (0,))
         m.vars[2] = var
-        vref = PointVariableRef(m, 2)
+        vref = InfOptVariableRef(m, 2, Point)
         # test function
         @test isa(InfiniteOpt._update_variable_info(vref, new_info), Nothing)
         @test InfiniteOpt._variable_info(vref) == new_info
@@ -33,7 +33,7 @@
         # initialize global variable
         var = GlobalVariable(info)
         m.vars[3] = var
-        vref = GlobalVariableRef(m, 3)
+        vref = InfOptVariableRef(m, 3, Global)
         # test function
         @test isa(InfiniteOpt._update_variable_info(vref, new_info), Nothing)
         @test InfiniteOpt._variable_info(vref) == new_info
@@ -57,9 +57,9 @@ end
     m.var_to_name[2] = "var2"
     m.var_to_name[3] = "var3"
     m.var_to_lower_bound[2] = 1
-    vref1 = GlobalVariableRef(m, 1)
-    vref2 = GlobalVariableRef(m, 2)
-    vref3 = GlobalVariableRef(m, 3)
+    vref1 = InfOptVariableRef(m, 1, Global)
+    vref2 = InfOptVariableRef(m, 2, Global)
+    vref3 = InfOptVariableRef(m, 3, Global)
     # _update_var_constr_mapping
     @testset "_update_var_constr_mapping" begin
         # test normal with no previous constrs
@@ -163,7 +163,7 @@ end
         var = InfiniteVariable(info1, (pref,))
         m.vars[4] = var
         m.var_to_name[4] = "var"
-        vref = InfiniteVariableRef(m, 4)
+        vref = InfOptVariableRef(m, 4, Infinite)
         # prepare lower bound constraint
         set_lower_bound(vref, 0)
         constr = ScalarConstraint(vref, MOI.GreaterThan(0.))
@@ -190,9 +190,9 @@ end
     m.var_to_name[2] = "var2"
     m.var_to_name[3] = "var3"
     m.var_to_upper_bound[2] = 1
-    vref1 = GlobalVariableRef(m, 1)
-    vref2 = GlobalVariableRef(m, 2)
-    vref3 = GlobalVariableRef(m, 3)
+    vref1 = InfOptVariableRef(m, 1, Global)
+    vref2 = InfOptVariableRef(m, 2, Global)
+    vref3 = InfOptVariableRef(m, 3, Global)
     # add_constraint
     @testset "JuMP.add_constraint" begin
         # prepare constraint reference
@@ -261,7 +261,7 @@ end
         var = InfiniteVariable(info1, (pref,))
         m.vars[4] = var
         m.var_to_name[4] = "var"
-        vref = InfiniteVariableRef(m, 4)
+        vref = InfOptVariableRef(m, 4, Infinite)
         # prepare Upper bound constraint
         set_upper_bound(vref, 0)
         constr = ScalarConstraint(vref, MOI.LessThan(0.))
@@ -290,10 +290,14 @@ end
     m.var_to_name[3] = "var3"
     m.var_to_name[4] = "var4"
     m.var_to_fix[2] = 1
-    vref1 = GlobalVariableRef(m, 1)
-    vref2 = GlobalVariableRef(m, 2)
-    vref3 = GlobalVariableRef(m, 3)
-    vref4 = GlobalVariableRef(m, 4)
+#    vref1 = GlobalVariableRef(m, 1)
+    vref1 = InfOptVariableRef(m, 1, Global)
+#    vref2 = GlobalVariableRef(m, 2)
+    vref2 = InfOptVariableRef(m, 2, Global)
+#    vref3 = GlobalVariableRef(m, 3)
+    vref3 = InfOptVariableRef(m, 3, Global)
+#    vref4 = GlobalVariableRef(m, 4)
+    vref4 = InfOptVariableRef(m, 4, Global)
     # add_constraint
     @testset "JuMP.add_constraint" begin
         # prepare constraint reference
@@ -380,7 +384,8 @@ end
         var = InfiniteVariable(info1, (pref,))
         m.vars[5] = var
         m.var_to_name[5] = "var"
-        vref = InfiniteVariableRef(m, 5)
+#        vref = InfiniteVariableRef(m, 5)
+        vref = InfOptVariableRef(m, 5, Infinite)
         # prepare Upper bound constraint
         fix(vref, 0)
         constr = ScalarConstraint(vref, MOI.EqualTo(0.))
@@ -397,7 +402,8 @@ end
     info1 = VariableInfo(false, 0., false, 0., false, 0., true, 0., false, false)
     var = GlobalVariable(info1)
     m.vars[1] = var
-    vref = GlobalVariableRef(m, 1)
+#    vref = GlobalVariableRef(m, 1)
+    vref = InfOptVariableRef(m, 1, Global)
     # start_value
     @testset "JuMP.start_value" begin
         @test start_value(vref) == 0
@@ -427,9 +433,12 @@ end
     m.var_to_name[2] = "var2"
     m.var_to_name[3] = "var3"
     m.var_to_zero_one[2] = 1
-    vref1 = GlobalVariableRef(m, 1)
-    vref2 = GlobalVariableRef(m, 2)
-    vref3 = GlobalVariableRef(m, 3)
+#    vref1 = GlobalVariableRef(m, 1)
+    vref1 = InfOptVariableRef(m, 1, Global)
+#    vref2 = GlobalVariableRef(m, 2)
+    vref2 = InfOptVariableRef(m, 2, Global)
+#    vref3 = GlobalVariableRef(m, 3)
+    vref3 = InfOptVariableRef(m, 3, Global)
     # add_constraint
     @testset "JuMP.add_constraint" begin
         # prepare constraint reference
@@ -491,7 +500,8 @@ end
         var = InfiniteVariable(info1, (pref,))
         m.vars[4] = var
         m.var_to_name[4] = "var"
-        vref = InfiniteVariableRef(m, 4)
+#        vref = InfiniteVariableRef(m, 4)
+        vref = InfOptVariableRef(m, 4, Infinite)
         # prepare Upper bound constraint
         set_binary(vref)
         constr = ScalarConstraint(vref, MOI.ZeroOne())
@@ -518,9 +528,12 @@ end
     m.var_to_name[2] = "var2"
     m.var_to_name[3] = "var3"
     m.var_to_integrality[2] = 1
-    vref1 = GlobalVariableRef(m, 1)
-    vref2 = GlobalVariableRef(m, 2)
-    vref3 = GlobalVariableRef(m, 3)
+#    vref1 = GlobalVariableRef(m, 1)
+    vref1 = InfOptVariableRef(m, 1, Global)
+#    vref2 = GlobalVariableRef(m, 2)
+    vref2 = InfOptVariableRef(m, 2, Global)
+#    vref3 = GlobalVariableRef(m, 3)
+    vref3 = InfOptVariableRef(m, 3, Global)
     # add_constraint
     @testset "JuMP.add_constraint" begin
         # prepare constraint reference
@@ -582,7 +595,8 @@ end
         var = InfiniteVariable(info1, (pref,))
         m.vars[4] = var
         m.var_to_name[4] = "var"
-        vref = InfiniteVariableRef(m, 4)
+#        vref = InfiniteVariableRef(m, 4)
+        vref = InfOptVariableRef(m, 4, Infinite)
         # prepare Upper bound constraint
         set_integer(vref)
         constr = ScalarConstraint(vref, MOI.Integer())

@@ -4,7 +4,7 @@ function _reduced_info(vref::ReducedInfiniteVariableRef)::ReducedInfiniteInfo
 end
 
 """
-    infinite_variable_ref(vref::ReducedInfiniteVariableRef)::InfiniteVariableRef
+    infinite_variable_ref(vref::ReducedInfiniteVariableRef)::InfOptVariableRef
 
 Return the `InfiniteVariableRef` associated with the reduced infinite variable
 `vref`.
@@ -15,7 +15,8 @@ julia> infinite_variable_ref(vref)
 g(t, x)
 ```
 """
-function infinite_variable_ref(vref::ReducedInfiniteVariableRef)::InfiniteVariableRef
+#function infinite_variable_ref(vref::ReducedInfiniteVariableRef)::InfiniteVariableRef
+function infinite_variable_ref(vref::ReducedInfiniteVariableRef)::InfOptVariableRef
     return _reduced_info(vref).infinite_variable_ref
 end
 
@@ -57,19 +58,8 @@ function parameter_refs(vref::ReducedInfiniteVariableRef)
     return prefs
 end
 
-"""
-    JuMP.name(vref::ReducedInfiniteVariableRef)::String
-
-Extend `JuMP.name` to return name of reduced infinite variable references. This
-is used when displaying measure expansions that contain such variables.
-
-**Exanple**
-```julia
-julia> name(rvref)
-g(1.25, x)
-```
-"""
-function JuMP.name(vref::ReducedInfiniteVariableRef)::String
+# JuMP.name for reduced variables
+function JuMP.name(vref::InfOptVariableRef, ::Val{Reduced})::String
     root_name = _root_name(infinite_variable_ref(vref))
     prefs = parameter_refs(infinite_variable_ref(vref))
     param_names = [_root_name(first(pref)) for pref in prefs]
@@ -88,35 +78,13 @@ function JuMP.name(vref::ReducedInfiniteVariableRef)::String
     return string(root_name, param_name_tuple)
 end
 
-"""
-    JuMP.has_lower_bound(vref::ReducedInfiniteVariableRef)::Bool
-
-Extend [`JuMP.has_lower_bound`](@ref) to return a `Bool` whether the original
-infinite variable of `vref` has a lower bound.
-
-**Example**
-```julia
-julia> has_lower_bound(vref)
-true
-```
-"""
-function JuMP.has_lower_bound(vref::ReducedInfiniteVariableRef)::Bool
+# JuMP.has_lower_bound for reduced variables
+function JuMP.has_lower_bound(vref::InfOptVariableRef, ::Val{Reduced})::Bool
     return JuMP.has_lower_bound(infinite_variable_ref(vref))
 end
 
-"""
-    JuMP.lower_bound(vref::ReducedInfiniteVariableRef::Float64
-
-Extend [`JuMP.lower_bound`](@ref) to return the lower bound of the original
-infinite variable of `vref`. Errors if `vref` doesn't have a lower bound.
-
-**Example**
-```julia
-julia> lower_bound(vref)
-0.0
-```
-"""
-function JuMP.lower_bound(vref::ReducedInfiniteVariableRef)::Float64
+# JuMP.lower_bound for reduced variables
+function JuMP.lower_bound(vref::InfOptVariableRef, ::Val{Reduced})::Float64
     if !JuMP.has_lower_bound(vref)
         error("Variable $(vref) does not have a lower bound.")
     end
@@ -148,35 +116,13 @@ function JuMP.LowerBoundRef(vref::ReducedInfiniteVariableRef)::GeneralConstraint
     return JuMP.LowerBoundRef(infinite_variable_ref(vref))
 end
 
-"""
-    JuMP.has_upper_bound(vref::ReducedInfiniteVariableRef)::Bool
-
-Extend [`JuMP.has_upper_bound`](@ref) to return a `Bool` whether the original
-infinite variable of `vref` has an upper bound.
-
-**Example**
-```julia
-julia> has_upper_bound(vref)
-true
-```
-"""
-function JuMP.has_upper_bound(vref::ReducedInfiniteVariableRef)::Bool
+# JuMP.has_upper_bound for reduced variables
+function JuMP.has_upper_bound(vref::InfOptVariableRef, ::Val{Reduced})::Bool
     return JuMP.has_upper_bound(infinite_variable_ref(vref))
 end
 
-"""
-    JuMP.upper_bound(vref::ReducedInfiniteVariableRef)::Float64
-
-Extend [`JuMP.upper_bound`](@ref) to return the upper bound of the original
-infinite variable of `vref`. Errors if `vref` doesn't have a upper bound.
-
-**Example**
-```julia
-julia> upper_bound(vref)
-0.0
-```
-"""
-function JuMP.upper_bound(vref::ReducedInfiniteVariableRef)::Float64
+# JuMP.upper_bound for reduced variables
+function JuMP.upper_bound(vref::InfOptVariableRef, ::Val{Reduced})::Float64
     if !JuMP.has_upper_bound(vref)
         error("Variable $(vref) does not have a upper bound.")
     end
@@ -369,49 +315,19 @@ function JuMP.IntegerRef(vref::ReducedInfiniteVariableRef)::GeneralConstraintRef
     return JuMP.IntegerRef(infinite_variable_ref(vref))
 end
 
-"""
-    used_by_constraint(vref::ReducedInfiniteVariableRef)::Bool
-
-Return a `Bool` indicating if `vref` is used by a constraint.
-
-**Example**
-```julia
-julia> used_by_constraint(vref)
-false
-```
-"""
-function used_by_constraint(vref::ReducedInfiniteVariableRef)::Bool
+# used_by_constraint for reduced variables
+function used_by_constraint(vref::InfOptVariableRef, ::Val{Reduced})::Bool
     return haskey(JuMP.owner_model(vref).reduced_to_constrs, JuMP.index(vref))
 end
 
-"""
-    used_by_measure(vref::ReducedInfiniteVariableRef)::Bool
-
-Return a `Bool` indicating if `vref` is used by a measure.
-
-**Example**
-```julia
-julia> used_by_measure(vref)
-true
-```
-"""
-function used_by_measure(vref::ReducedInfiniteVariableRef)::Bool
+# used_by_measure for reduced variables
+function used_by_measure(vref::InfOptVariableRef, ::Val{Reduced})::Bool
     return haskey(JuMP.owner_model(vref).reduced_to_meas, JuMP.index(vref))
 end
 
-"""
-    JuMP.is_valid(model::InfiniteModel, vref::ReducedInfiniteVariableRef)::Bool
-
-Extend [`JuMP.is_valid`](@ref) to accomodate reduced infinite variables.
-
-**Example**
-```julia
-julia> is_valid(model, vref)
-true
-```
-"""
-function JuMP.is_valid(model::InfiniteModel,
-                       vref::ReducedInfiniteVariableRef)::Bool
+# JuMP.is_valid for reduced variables
+function JuMP.is_valid(model::InfiniteModel, vref::InfOptVariableRef,
+                       ::Val{Reduced})::Bool
     return (model === JuMP.owner_model(vref) && JuMP.index(vref) in keys(model.reduced_info))
 end
 
@@ -447,7 +363,8 @@ Subject to
  x in [0, 1]
 ```
 """
-function JuMP.delete(model::InfiniteModel, vref::ReducedInfiniteVariableRef)
+# JuMP.delete for reduced variables
+function JuMP.delete(model::InfiniteModel, vref::InfOptVariableRef, ::Val{Reduced})
     # check valid reference
     @assert JuMP.is_valid(model, vref) "Invalid variable reference."
     # remove from measures if used

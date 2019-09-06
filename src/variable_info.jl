@@ -4,8 +4,14 @@ function _variable_info(vref::InfOptVariableRef)::JuMP.VariableInfo
     return JuMP.owner_model(vref).vars[JuMP.index(vref)].info
 end
 
+# Function wrapper for _update_variable_info
+function _update_variable_info(vref::InfOptVariableRef, info::JuMP.VariableInfo)
+    _update_variable_info(vref, Val(variable_type(vref)), info)
+    return
+end
+
 # Set info for infinite variables
-function _update_variable_info(vref::InfiniteVariableRef,
+function _update_variable_info(vref::InfOptVariableRef, ::Val{Infinite},
                                info::JuMP.VariableInfo)
     parameter_refs = JuMP.owner_model(vref).vars[JuMP.index(vref)].parameter_refs
     JuMP.owner_model(vref).vars[JuMP.index(vref)] = InfiniteVariable(info,
@@ -14,7 +20,8 @@ function _update_variable_info(vref::InfiniteVariableRef,
 end
 
 # Set info for point variables
-function _update_variable_info(vref::PointVariableRef, info::JuMP.VariableInfo)
+function _update_variable_info(vref::InfOptVariableRef, ::Val{Point},
+                               info::JuMP.VariableInfo)
     infinite_variable_ref = JuMP.owner_model(vref).vars[JuMP.index(vref)].infinite_variable_ref
     parameter_values = JuMP.owner_model(vref).vars[JuMP.index(vref)].parameter_values
     JuMP.owner_model(vref).vars[JuMP.index(vref)] = PointVariable(info,
@@ -24,38 +31,18 @@ function _update_variable_info(vref::PointVariableRef, info::JuMP.VariableInfo)
 end
 
 # Set info for global variables
-function _update_variable_info(vref::GlobalVariableRef, info::JuMP.VariableInfo)
+function _update_variable_info(vref::InfOptVariableRef, ::Val{Global},
+                               info::JuMP.VariableInfo)
     JuMP.owner_model(vref).vars[JuMP.index(vref)] = GlobalVariable(info)
     return
 end
 
-"""
-    JuMP.has_lower_bound(vref::InfOptVariableRef)::Bool
+# JuMP.has_lower_bound for variables
+JuMP.has_lower_bound(vref::InfOptVariableRef, <:Variables)::Bool =
+    _variable_info(vref).has_lb
 
-Extend [`JuMP.has_lower_bound`](@ref) to return a `Bool` whether an `InfiniteOpt`
-variable has a lower bound.
-
-**Example**
-```julia
-julia> has_lower_bound(vref)
-true
-```
-"""
-JuMP.has_lower_bound(vref::InfOptVariableRef)::Bool = _variable_info(vref).has_lb
-
-"""
-    JuMP.lower_bound(vref::InfOptVariableRef)::Float64
-
-Extend [`JuMP.lower_bound`](@ref) to return the lower bound of an `InfiniteOpt`
-variable. Errors if `vref` doesn't have a lower bound.
-
-**Example**
-```julia
-julia> lower_bound(vref)
-0.0
-```
-"""
-function JuMP.lower_bound(vref::InfOptVariableRef)::Float64
+# JuMP.lower_bound for variables
+function JuMP.lower_bound(vref::InfOptVariableRef, <:Variables)::Float64
     if !JuMP.has_lower_bound(vref)
         error("Variable $(vref) does not have a lower bound.")
     end
@@ -77,21 +64,8 @@ function _set_lower_bound_index(vref::InfOptVariableRef, cindex::Int)
     return
 end
 
-"""
-    JuMP.set_lower_bound(vref::InfOptVariableRef, lower::Number)
-
-Extend [`JuMP.set_lower_bound`](@ref) to specify the lower bound of an
-`InfiniteOpt` variable `vref`. Errors if `vref` is fixed.
-
-**Example**
-```julia
-julia> set_lower_bound(vref, -1)
-
-julia> lower_bound(vref)
--1.0
-```
-"""
-function JuMP.set_lower_bound(vref::InfOptVariableRef, lower::Number)
+# JuMP.set_lower_bound for variables
+function JuMP.set_lower_bound(vref::InfOptVariableRef, <:Variables, lower::Number)
     newset = MOI.GreaterThan(convert(Float64, lower))
     if JuMP.has_lower_bound(vref)
         cindex = JuMP._lower_bound_index(vref)
@@ -164,33 +138,12 @@ function JuMP.delete_lower_bound(vref::InfOptVariableRef)
     return
 end
 
-"""
-    JuMP.has_upper_bound(vref::InfOptVariableRef)::Bool
+# JuMP.has_upper_bound for variables
+JuMP.has_upper_bound(vref::InfOptVariableRef, <:Variables)::Bool =
+    _variable_info(vref).has_ub
 
-Extend [`JuMP.has_upper_bound`](@ref) to return a `Bool` whether an `InfiniteOpt`
-variable has an upper bound.
-
-**Example**
-```julia
-julia> has_upper_bound(vref)
-true
-```
-"""
-JuMP.has_upper_bound(vref::InfOptVariableRef)::Bool = _variable_info(vref).has_ub
-
-"""
-    JuMP.upper_bound(vref::InfOptVariableRef)::Float64
-
-Extend [`JuMP.upper_bound`](@ref) to return the upper bound of an `InfiniteOpt`
-variable. Errors if `vref` doesn't have a upper bound.
-
-**Example**
-```julia
-julia> upper_bound(vref)
-0.0
-```
-"""
-function JuMP.upper_bound(vref::InfOptVariableRef)::Float64
+# JuMP.upper_bound for variables
+function JuMP.upper_bound(vref::InfOptVariableRef, <:Variables)::Float64
     if !JuMP.has_upper_bound(vref)
         error("Variable $(vref) does not have a upper bound.")
     end
@@ -211,21 +164,8 @@ function _set_upper_bound_index(vref::InfOptVariableRef, cindex::Int)
     return
 end
 
-"""
-    JuMP.set_upper_bound(vref::InfOptVariableRef, upper::Number)
-
-Extend [`JuMP.set_upper_bound`](@ref) to specify the upper bound of an
-`InfiniteOpt` variable `vref`. Errors if `vref` is fixed.
-
-**Example**
-```julia
-julia> set_upper_bound(vref, 1)
-
-julia> upper_bound(vref)
-1.0
-```
-"""
-function JuMP.set_upper_bound(vref::InfOptVariableRef, upper::Number)
+# JuMP.set_upper_bound for variables
+function JuMP.set_upper_bound(vref::InfOptVariableRef, <:Variables, upper::Number)
     newset = MOI.LessThan(convert(Float64, upper))
     if JuMP.has_upper_bound(vref)
         cindex = JuMP._upper_bound_index(vref)

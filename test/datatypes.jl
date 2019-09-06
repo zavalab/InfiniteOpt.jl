@@ -51,9 +51,10 @@ end
 @testset "References" begin
     m = InfiniteModel();
     # Abstract types
-    @test GeneralVariableRef <: JuMP.AbstractVariableRef
-    @test MeasureFiniteVariableRef <: GeneralVariableRef
-    @test FiniteVariableRef <: MeasureFiniteVariableRef
+#    @test GeneralVariableRef <: JuMP.AbstractVariableRef
+#    @test MeasureFiniteVariableRef <: GeneralVariableRef
+#    @test FiniteVariableRef <: MeasureFiniteVariableRef
+#=
     # Global variable refs
     @test GlobalVariableRef <: FiniteVariableRef
     @test GlobalVariableRef(m, 1).index == 1
@@ -64,25 +65,34 @@ end
     @test InfiniteVariableRef <: GeneralVariableRef
     @test InfiniteVariableRef(m, 1).index == 1
     ivref = InfiniteVariableRef(m, 1)
+=#
+    # Global/Point/Infinite variable refs
+    @test InfOptVariableRef <: JuMP.AbstractVariableRef
+    @test InfOptVariableRef(m, 1, Global).index == 1
+    @test InfOptVariableRef(m, 1, Point).index == 1
+    @test InfOptVariableRef(m, 1, Infinite).index == 1
     # Reduced infinite variable refs
-    @test ReducedInfiniteVariableRef <: GeneralVariableRef
-    @test ReducedInfiniteVariableRef(m, 1).index == 1
+#    @test ReducedInfiniteVariableRef <: GeneralVariableRef
+#    @test ReducedInfiniteVariableRef(m, 1).index == 1
+    @test InfOptVariableRef(m, 1, Reduced).index == 1
     # Parameter refs
-    @test ParameterRef <: GeneralVariableRef
-    @test ParameterRef(m, 1).index == 1
-    pref = ParameterRef(m, 1)
+#    @test ParameterRef <: GeneralVariableRef
+#    @test ParameterRef(m, 1).index == 1
+#    pref = ParameterRef(m, 1)
+    pref = InfOptVariableRef(m, 1, Parameter)
     @test copy(pref, m).index == 1
     # Measure refs
-    @test MeasureRef <: MeasureFiniteVariableRef
-    @test MeasureRef(m, 1).index == 1
+#    @test MeasureRef <: MeasureFiniteVariableRef
+#    @test MeasureRef(m, 1).index == 1
 end
 
 # Test the constraint datatypes
 @testset "Unions" begin
-    @test InfOptVariableRef <: GeneralVariableRef
-    @test InfiniteExpr <: AbstractJuMPScalar
-    @test ParameterExpr <: AbstractJuMPScalar
-    @test MeasureExpr <: AbstractJuMPScalar
+#    @test InfOptVariableRef <: GeneralVariableRef
+#    @test InfiniteExpr <: AbstractJuMPScalar
+#    @test ParameterExpr <: AbstractJuMPScalar
+#    @test MeasureExpr <: AbstractJuMPScalar
+    @test Expr <: AbstractJuMPScalar
 end
 
 # Test the constraint datatypes
@@ -90,7 +100,8 @@ end
     m = InfiniteModel();
     # Bounded constraints
     @test BoundedScalarConstraint <: JuMP.AbstractConstraint
-    pref = ParameterRef(m, 1);
+#    pref = ParameterRef(m, 1);
+    pref = InfOptVariableRef(m, 1, Parameter);
     dict = Dict(pref => IntervalSet(0, 1));
     @test BoundedScalarConstraint(zero(AffExpr), MOI.Integer(),
                                   dict).bounds[pref].lower_bound == 0.0

@@ -9,7 +9,7 @@
     var = InfiniteVariable(info, (pref, pref2))
     m.vars[1] = var
     m.var_to_name[1] = "var"
-    vref = InfiniteVariableRef(m, 1)
+    vref = InfOptVariableRef(m, 1, Infinite)
     # JuMP.name
     @testset "JuMP.name" begin
         @test name(vref) == "var"
@@ -21,7 +21,7 @@
     # JuMP.set_name
     @testset "JuMP.set_name" begin
         # make extra infinite variable
-        vref2 = InfiniteVariableRef(m, 2)
+        vref2 = InfOptVariableRef(m, 2, Infinite)
         m.vars[2] = var
         # test normal
         @test isa(set_name(vref, "new"), Nothing)
@@ -98,6 +98,9 @@ end
         @test_throws ErrorException build_variable(error, info, Infinite,
                                                    bob = 42)
         @test_throws ErrorException build_variable(error, info, :bad)
+        @test_throws ErrorException build_variable(error, info,
+                                                   infinite_variable_ref =
+                                                   InfOptVariableRef(m, 1, Point))
         @test_throws ErrorException build_variable(error, info, Point,
                                                    parameter_refs = pref)
         @test_throws ErrorException build_variable(error, info, Infinite)
@@ -130,8 +133,8 @@ end
         param = InfOptParameter(IntervalSet(0, 1), Number[], false)
         pref3 = add_parameter(m2, param, "test")
         prefs2 = @infinite_parameter(m2, x[1:2], set = IntervalSet(0, 1))
-        ivref = InfiniteVariableRef(m2, 1)
-        ivref2 = InfiniteVariableRef(m2, 2)
+        ivref = InfOptVariableRef(m2, 1, Infinite)
+        ivref2 = InfOptVariableRef(m2, 2, Infinite)
         # prepare tuple
         tuple = (pref3, prefs2)
         tuple = InfiniteOpt._make_formatted_tuple(tuple)
@@ -168,50 +171,50 @@ end
         # prepare normal variable
         v = build_variable(error, info, Infinite, parameter_refs = pref)
         # test normal
-        @test add_variable(m, v, "name") == InfiniteVariableRef(m, 2)
+        @test add_variable(m, v, "name") == InfOptVariableRef(m, 2, Infinite)
         @test haskey(m.vars, 2)
         @test m.param_to_vars[1] == [2]
         @test m.var_to_name[2] == "name(test)"
         # prepare infinite variable with all the possible info additions
         v = build_variable(error, info2, Infinite, parameter_refs = pref)
         # test info addition functions
-        vref = InfiniteVariableRef(m, 3)
+        vref = InfOptVariableRef(m, 3, Infinite)
         @test add_variable(m, v, "name") == vref
         @test !optimizer_model_ready(m)
         # lower bound
         @test has_lower_bound(vref)
         @test JuMP._lower_bound_index(vref) == 1
-        @test isa(m.constrs[1], ScalarConstraint{InfiniteVariableRef,
+        @test isa(m.constrs[1], ScalarConstraint{InfOptVariableRef,
                                                  MOI.GreaterThan{Float64}})
         @test m.constr_in_var_info[1]
         # upper bound
         @test has_upper_bound(vref)
         @test JuMP._upper_bound_index(vref) == 2
-        @test isa(m.constrs[2], ScalarConstraint{InfiniteVariableRef,
+        @test isa(m.constrs[2], ScalarConstraint{InfOptVariableRef,
                                                  MOI.LessThan{Float64}})
         @test m.constr_in_var_info[2]
         # fix
         @test is_fixed(vref)
         @test JuMP._fix_index(vref) == 3
-        @test isa(m.constrs[3], ScalarConstraint{InfiniteVariableRef,
+        @test isa(m.constrs[3], ScalarConstraint{InfOptVariableRef,
                                                  MOI.EqualTo{Float64}})
         @test m.constr_in_var_info[3]
         # binary
         @test is_binary(vref)
         @test JuMP._binary_index(vref) == 4
-        @test isa(m.constrs[4], ScalarConstraint{InfiniteVariableRef,
+        @test isa(m.constrs[4], ScalarConstraint{InfOptVariableRef,
                                                  MOI.ZeroOne})
         @test m.constr_in_var_info[4]
         @test m.var_to_constrs[3] == [1, 2, 3, 4]
         # prepare infinite variable with integer info addition
         v = build_variable(error, info3, Infinite, parameter_refs = pref)
         # test integer addition functions
-        vref = InfiniteVariableRef(m, 4)
+        vref = InfOptVariableRef(m, 4, Infinite)
         @test add_variable(m, v, "name") == vref
         @test !optimizer_model_ready(m)
         @test is_integer(vref)
         @test JuMP._integer_index(vref) == 8
-        @test isa(m.constrs[8], ScalarConstraint{InfiniteVariableRef,
+        @test isa(m.constrs[8], ScalarConstraint{InfOptVariableRef,
                                                  MOI.Integer})
         @test m.constr_in_var_info[8]
         @test m.var_to_constrs[4] == [5, 6, 7, 8]
@@ -231,7 +234,7 @@ end
     var = PointVariable(info, ivref, (0.5, 0.5))
     m.vars[2] = var
     m.var_to_name[2] = "var"
-    vref = PointVariableRef(m, 2)
+    vref = InfOptVariableRef(m, 2, Point)
     # JuMP.name
     @testset "JuMP.name" begin
         @test name(vref) == "var"
@@ -243,7 +246,7 @@ end
     # JuMP.set_name
     @testset "JuMP.set_name" begin
         # prepare a secondary point variable
-        vref2 = PointVariableRef(m, 3)
+        vref2 = InfOptVariableRef(m, 3, Point)
         m.vars[3] = var
         # test normal
         @test isa(set_name(vref, "new"), Nothing)
@@ -256,7 +259,7 @@ end
         ivref2 = add_variable(m, InfiniteVariable(info, (pref,)), "ivar2")
         m.vars[5] = PointVariable(info, ivref2, (0.5,))
         m.var_to_name[5] = "var42"
-        vref3 = PointVariableRef(m, 5)
+        vref3 = InfOptVariableRef(m, 5, Point)
         @test isa(set_name(vref3, ""), Nothing)
         @test name(vref3) == "ivar2(0.5)"
     end
@@ -399,12 +402,12 @@ end
     # _update_infinite_point_mapping
     @testset "_update_infinite_point_mapping" begin
         # test first addition
-        pvref = PointVariableRef(m, 12)
+        pvref = InfOptVariableRef(m, 12, Point)
         @test isa(InfiniteOpt._update_infinite_point_mapping(pvref, ivref),
                   Nothing)
         @test m.infinite_to_points[JuMP.index(ivref)] == [12]
         # test second addition
-        pvref = PointVariableRef(m, 42)
+        pvref = InfOptVariableRef(m, 42, Point)
         @test isa(InfiniteOpt._update_infinite_point_mapping(pvref, ivref),
                   Nothing)
         @test m.infinite_to_points[JuMP.index(ivref)] == [12, 42]
@@ -425,7 +428,7 @@ end
         # test normal
         v = build_variable(error, info, Point, infinite_variable_ref = ivref,
                            parameter_values = (0, 1))
-        @test add_variable(m, v, "name") == PointVariableRef(m, 4)
+        @test add_variable(m, v, "name") == InfOptVariableRef(m, 4, Point)
         @test haskey(m.vars, 4)
         @test supports(pref) == [0, 0.5]
         @test supports(pref2) == [1]
@@ -435,31 +438,31 @@ end
         v = build_variable(error, info2, Point, infinite_variable_ref = ivref,
                            parameter_values = (0, 1))
         # test info addition functions
-        vref = PointVariableRef(m, 5)
+        vref = InfOptVariableRef(m, 5, Point)
         @test add_variable(m, v, "name") == vref
         @test !optimizer_model_ready(m)
         # lower bound
         @test has_lower_bound(vref)
         @test JuMP._lower_bound_index(vref) == 1
-        @test isa(m.constrs[1], ScalarConstraint{PointVariableRef,
+        @test isa(m.constrs[1], ScalarConstraint{InfOptVariableRef,
                                                  MOI.GreaterThan{Float64}})
         @test m.constr_in_var_info[1]
         # upper bound
         @test has_upper_bound(vref)
         @test JuMP._upper_bound_index(vref) == 2
-        @test isa(m.constrs[2], ScalarConstraint{PointVariableRef,
+        @test isa(m.constrs[2], ScalarConstraint{InfOptVariableRef,
                                                  MOI.LessThan{Float64}})
         @test m.constr_in_var_info[2]
         # fix
         @test is_fixed(vref)
         @test JuMP._fix_index(vref) == 3
-        @test isa(m.constrs[3], ScalarConstraint{PointVariableRef,
+        @test isa(m.constrs[3], ScalarConstraint{InfOptVariableRef,
                                                  MOI.EqualTo{Float64}})
         @test m.constr_in_var_info[3]
         # binary
         @test is_binary(vref)
         @test JuMP._binary_index(vref) == 4
-        @test isa(m.constrs[4], ScalarConstraint{PointVariableRef,
+        @test isa(m.constrs[4], ScalarConstraint{InfOptVariableRef,
                                                  MOI.ZeroOne})
         @test m.constr_in_var_info[4]
         @test m.var_to_constrs[5] == [1, 2, 3, 4]
@@ -467,12 +470,12 @@ end
         v = build_variable(error, info3, Point, infinite_variable_ref = ivref,
                            parameter_values = (0, 1))
         # test integer addition functions
-        vref = PointVariableRef(m, 6)
+        vref = InfOptVariableRef(m, 6, Point)
         @test add_variable(m, v, "name") == vref
         @test !optimizer_model_ready(m)
         @test is_integer(vref)
         @test JuMP._integer_index(vref) == 8
-        @test isa(m.constrs[8], ScalarConstraint{PointVariableRef,
+        @test isa(m.constrs[8], ScalarConstraint{InfOptVariableRef,
                                                  MOI.Integer})
         @test m.constr_in_var_info[8]
         @test m.var_to_constrs[6] == [5, 6, 7, 8]
@@ -487,7 +490,7 @@ end
     var = GlobalVariable(info)
     m.vars[1] = var
     m.var_to_name[1] = "test"
-    vref = GlobalVariableRef(m, 1)
+    vref = InfOptVariableRef(m, 1, Global)
     # JuMP.name
     @testset "JuMP.name" begin
         @test name(vref) == "test"
@@ -530,49 +533,49 @@ end
     # add_variable
     @testset "JuMP.add_variable" begin
         v = build_variable(error, info, Global)
-        @test add_variable(m, v, "name") == GlobalVariableRef(m, 1)
+        @test add_variable(m, v, "name") == InfOptVariableRef(m, 1, Global)
         @test haskey(m.vars, 1)
         @test m.var_to_name[1] == "name"
         # prepare infinite variable with all the possible info additions
         v = build_variable(error, info2, Global)
         # test info addition functions
-        vref = GlobalVariableRef(m, 2)
+        vref = InfOptVariableRef(m, 2, Global)
         @test add_variable(m, v, "name") == vref
         @test !optimizer_model_ready(m)
         # lower bound
         @test has_lower_bound(vref)
         @test JuMP._lower_bound_index(vref) == 1
-        @test isa(m.constrs[1], ScalarConstraint{GlobalVariableRef,
+        @test isa(m.constrs[1], ScalarConstraint{InfOptVariableRef,
                                                  MOI.GreaterThan{Float64}})
         @test m.constr_in_var_info[1]
         # upper bound
         @test has_upper_bound(vref)
         @test JuMP._upper_bound_index(vref) == 2
-        @test isa(m.constrs[2], ScalarConstraint{GlobalVariableRef,
+        @test isa(m.constrs[2], ScalarConstraint{InfOptVariableRef,
                                                  MOI.LessThan{Float64}})
         @test m.constr_in_var_info[2]
         # fix
         @test is_fixed(vref)
         @test JuMP._fix_index(vref) == 3
-        @test isa(m.constrs[3], ScalarConstraint{GlobalVariableRef,
+        @test isa(m.constrs[3], ScalarConstraint{InfOptVariableRef,
                                                  MOI.EqualTo{Float64}})
         @test m.constr_in_var_info[3]
         # binary
         @test is_binary(vref)
         @test JuMP._binary_index(vref) == 4
-        @test isa(m.constrs[4], ScalarConstraint{GlobalVariableRef,
+        @test isa(m.constrs[4], ScalarConstraint{InfOptVariableRef,
                                                  MOI.ZeroOne})
         @test m.constr_in_var_info[4]
         @test m.var_to_constrs[2] == [1, 2, 3, 4]
         # prepare infinite variable with integer info addition
         v = build_variable(error, info3, Global)
         # test integer addition functions
-        vref = GlobalVariableRef(m, 3)
+        vref = InfOptVariableRef(m, 3, Global)
         @test add_variable(m, v, "name") == vref
         @test !optimizer_model_ready(m)
         @test is_integer(vref)
         @test JuMP._integer_index(vref) == 8
-        @test isa(m.constrs[8], ScalarConstraint{GlobalVariableRef,
+        @test isa(m.constrs[8], ScalarConstraint{InfOptVariableRef,
                                                  MOI.Integer})
         @test m.constr_in_var_info[8]
         @test m.var_to_constrs[3] == [5, 6, 7, 8]

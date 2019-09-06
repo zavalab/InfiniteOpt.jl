@@ -1,3 +1,12 @@
+# Define variable and union types
+const Infinite = :Infinite
+const Point = :Point
+const Global = :Global
+const Parameter = :Parameter
+const MeasureRef = :MeasureRef
+const Reduced = :Reduced
+const Variables = Union{Val{Infinite}, Val{Point}, Val{Global}}
+
 """
     AbstractInfiniteSet
 
@@ -75,60 +84,60 @@ A DataType for storing all of the mathematical modeling information needed to
 model an optmization problem with an infinite dimensional decision space.
 
 **Fields**
-- `next_meas_index::Int` Index - 1 of next measure.
-- `measures::Dict{Int, Measure}` Measure indices to measure datatypes.
-- `meas_to_name::Dict{Int, String}` Measure indices to names.
-- `meas_to_constrs::Dict{Int, Vector{Int}}` Measure indices to dependent
+- `next_meas_index::Int64` Index - 1 of next measure.
+- `measures::Dict{Int64, Measure}` Measure indices to measure datatypes.
+- `meas_to_name::Dict{Int64, String}` Measure indices to names.
+- `meas_to_constrs::Dict{Int64, Vector{Int64}}` Measure indices to dependent
                                             constraint indices.
-- `meas_to_meas::Dict{Int, Vector{Int}}` Measure indices to dependent
+- `meas_to_meas::Dict{Int64, Vector{Int64}}` Measure indices to dependent
                                          measure indices.
-- `meas_in_objective::Dict{Int, Bool}` Measure indices to if used in objective.
-- `next_param_index::Int` Index - 1 of next infinite parameter.
-- `next_param_id::Int` Index - 1 of the next infinite parameter group.
-- `params::Dict{Int, InfOptParameter}` Infinite parameter indices to parameter
+- `meas_in_objective::Dict{Int64, Bool}` Measure indices to if used in objective.
+- `next_param_index::Int64` Index - 1 of next infinite parameter.
+- `next_param_id::Int64` Index - 1 of the next infinite parameter group.
+- `params::Dict{Int64, InfOptParameter}` Infinite parameter indices to parameter
                                        datatype.
-- `param_to_name::Dict{Int, String}` Infinite parameter indices to names.
-- `name_to_param::Union{Dict{String, Int}, Nothing}` Names to infinite
+- `param_to_name::Dict{Int64, String}` Infinite parameter indices to names.
+- `name_to_param::Union{Dict{String, Int64}, Nothing}` Names to infinite
                                                      parameters.
-- `param_to_group_id::Dict{Int, Int}` Infinite parameter indices to group IDs.
-- `param_to_constrs::Dict{Int, Vector{Int}}` Infinite parameter indices to list
+- `param_to_group_id::Dict{Int64, Int64}` Infinite parameter indices to group IDs.
+- `param_to_constrs::Dict{Int64, Vector{Int64}}` Infinite parameter indices to list
                                              of dependent constraint indices.
-- `param_to_meas::Dict{Int, Vector{Int}}` Infinite parameter indices to list
+- `param_to_meas::Dict{Int64, Vector{Int64}}` Infinite parameter indices to list
                                           of dependent measure indices.
-- `param_to_vars::Dict{Int, Vector{Int}}` Infinite parameter indices to list
+- `param_to_vars::Dict{Int64, Vector{Int64}}` Infinite parameter indices to list
                                           of dependent variable indices.
-- `next_var_index::Int` Index - 1 of next variable index.
-- `vars::Dict{Int, Dict{Int, Union{InfOptVariable, ReducedVariable}}` Variable
+- `next_var_index::Int64` Index - 1 of next variable index.
+- `vars::Dict{Int64, Dict{Int64, Union{InfOptVariable, ReducedVariable}}` Variable
                                                   indices to variable datatype.
-- `var_to_name::Dict{Int, String}` Variable indices to names.
-- `name_to_var::Union{Dict{String, Int}, Nothing}` Variable names to indices.
-- `var_to_lower_bound::Dict{Int, Int}` Variable indices to lower bound index.
-- `var_to_upper_bound::Dict{Int, Int}` Variable indices to upper bound index.
-- `var_to_fix::Dict{Int, Int}` Variable indices to fix index.
-- `var_to_zero_one::Dict{Int, Int}` Variable indices to binary index.
-- `var_to_integrality::Dict{Int, Int}` Variable indices to integer index.
-- `var_to_constrs::Dict{Int, Vector{Int}}` Variable indices to dependent
+- `var_to_name::Dict{Int64, String}` Variable indices to names.
+- `name_to_var::Union{Dict{String, Int64}, Nothing}` Variable names to indices.
+- `var_to_lower_bound::Dict{Int64, Int64}` Variable indices to lower bound index.
+- `var_to_upper_bound::Dict{Int64, Int64}` Variable indices to upper bound index.
+- `var_to_fix::Dict{Int64, Int64}` Variable indices to fix index.
+- `var_to_zero_one::Dict{Int64, Int64}` Variable indices to binary index.
+- `var_to_integrality::Dict{Int64, Int64}` Variable indices to integer index.
+- `var_to_constrs::Dict{Int64, Vector{Int64}}` Variable indices to dependent
                                            constraint indices.
-- `var_to_meas::Dict{Int, Vector{Int}}` Variable indices to dependent
+- `var_to_meas::Dict{Int64, Vector{Int64}}` Variable indices to dependent
                                         measure indices.
-- `var_in_objective::Dict{Int, Bool}` Variable indices to if used in objective.
-- `infinite_to_points::Dict{Int, Vector{Int}}` Infinite variable indices to
+- `var_in_objective::Dict{Int64, Bool}` Variable indices to if used in objective.
+- `infinite_to_points::Dict{Int64, Vector{Int64}}` Infinite variable indices to
                                                dependent point variable indices.
-- `infinite_to_reduced::Dict{Int, Vector{Int}}` Infinite variable indices to
+- `infinite_to_reduced::Dict{Int64, Vector{Int64}}` Infinite variable indices to
                                                dependent reduced variable indices.
-- `reduced_to_constrs::Dict{Int, Vector{Int}}` Reduced variable indices to dependent
+- `reduced_to_constrs::Dict{Int64, Vector{Int64}}` Reduced variable indices to dependent
                                                constraint indices.
-- `reduced_to_meas::Dict{Int, Vector{Int}}` Reduced variable indices to dependent
+- `reduced_to_meas::Dict{Int64, Vector{Int64}}` Reduced variable indices to dependent
                                             measure indices.
-- `reduced_info::Dict{Int, AbstractReducedInfo}` Reduced variable indices to
+- `reduced_info::Dict{Int64, AbstractReducedInfo}` Reduced variable indices to
                                                  reduced variable information.
-- `next_constr_index::Int` Index - 1 of next constraint.
-- `constrs::Dict{Int, JuMP.AbstractConstraint}` Constraint indices to constraint
+- `next_constr_index::Int64` Index - 1 of next constraint.
+- `constrs::Dict{Int64, JuMP.AbstractConstraint}` Constraint indices to constraint
                                                 datatypes.
-- `constr_to_name::Dict{Int, String}` Constraint indices to names.
-- `name_to_constr::Union{Dict{String, Int}, Nothing}` Constraint names to
+- `constr_to_name::Dict{Int64, String}` Constraint indices to names.
+- `name_to_constr::Union{Dict{String, Int64}, Nothing}` Constraint names to
                                                       indices.
-- `constr_in_var_info::Dict{Int, Bool}` Constraint indices to if related to
+- `constr_in_var_info::Dict{Int64, Bool}` Constraint indices to if related to
                                         variable information constraints.
 - `objective_sense::MOI.OptimizationSense` Objective sense.
 - `objective_function::JuMP.AbstractJuMPScalar` Finite scalar function.
@@ -140,51 +149,51 @@ model an optmization problem with an infinite dimensional decision space.
 """
 mutable struct InfiniteModel <: JuMP.AbstractModel
     # Measure Data
-    next_meas_index::Int
-    measures::Dict{Int, Measure}
-    meas_to_name::Dict{Int, String}
-    meas_to_constrs::Dict{Int, Vector{Int}}
-    meas_to_meas::Dict{Int, Vector{Int}}
-    meas_in_objective::Dict{Int, Bool}
+    next_meas_index::Int64
+    measures::Dict{Int64, Measure}
+    meas_to_name::Dict{Int64, String}
+    meas_to_constrs::Dict{Int64, Vector{Int64}}
+    meas_to_meas::Dict{Int64, Vector{Int64}}
+    meas_in_objective::Dict{Int64, Bool}
 
     # Parameter Data
-    next_param_index::Int
-    next_param_id::Int
-    params::Dict{Int, InfOptParameter}
-    param_to_name::Dict{Int, String}
-    name_to_param::Union{Dict{String, Int}, Nothing}
-    param_to_group_id::Dict{Int, Int}
-    param_to_constrs::Dict{Int, Vector{Int}}
-    param_to_meas::Dict{Int, Vector{Int}}
-    param_to_vars::Dict{Int, Vector{Int}}
+    next_param_index::Int64
+    next_param_id::Int64
+    params::Dict{Int64, InfOptParameter}
+    param_to_name::Dict{Int64, String}
+    name_to_param::Union{Dict{String, Int64}, Nothing}
+    param_to_group_id::Dict{Int64, Int64}
+    param_to_constrs::Dict{Int64, Vector{Int64}}
+    param_to_meas::Dict{Int64, Vector{Int64}}
+    param_to_vars::Dict{Int64, Vector{Int64}}
 
     # Variable data
-    next_var_index::Int
-    vars::Dict{Int, InfOptVariable}
-    var_to_name::Dict{Int, String}
-    name_to_var::Union{Dict{String, Int}, Nothing}
-    var_to_lower_bound::Dict{Int, Int}
-    var_to_upper_bound::Dict{Int, Int}
-    var_to_fix::Dict{Int, Int}
-    var_to_zero_one::Dict{Int, Int}
-    var_to_integrality::Dict{Int, Int}
-    var_to_constrs::Dict{Int, Vector{Int}}
-    var_to_meas::Dict{Int, Vector{Int}}
-    var_in_objective::Dict{Int, Bool}
-    infinite_to_points::Dict{Int, Vector{Int}}
-    infinite_to_reduced::Dict{Int, Vector{Int}}
+    next_var_index::Int64
+    vars::Dict{Int64, InfOptVariable}
+    var_to_name::Dict{Int64, String}
+    name_to_var::Union{Dict{String, Int64}, Nothing}
+    var_to_lower_bound::Dict{Int64, Int64}
+    var_to_upper_bound::Dict{Int64, Int64}
+    var_to_fix::Dict{Int64, Int64}
+    var_to_zero_one::Dict{Int64, Int64}
+    var_to_integrality::Dict{Int64, Int64}
+    var_to_constrs::Dict{Int64, Vector{Int64}}
+    var_to_meas::Dict{Int64, Vector{Int64}}
+    var_in_objective::Dict{Int64, Bool}
+    infinite_to_points::Dict{Int64, Vector{Int64}}
+    infinite_to_reduced::Dict{Int64, Vector{Int64}}
 
     # Placeholder
-    reduced_to_constrs::Dict{Int, Vector{Int}}
-    reduced_to_meas::Dict{Int, Vector{Int}}
-    reduced_info::Dict{Int, AbstractReducedInfo}
+    reduced_to_constrs::Dict{Int64, Vector{Int64}}
+    reduced_to_meas::Dict{Int64, Vector{Int64}}
+    reduced_info::Dict{Int64, AbstractReducedInfo}
 
     # Constraint Data
-    next_constr_index::Int
-    constrs::Dict{Int, JuMP.AbstractConstraint}
-    constr_to_name::Dict{Int, String}
-    name_to_constr::Union{Dict{String, Int}, Nothing}
-    constr_in_var_info::Dict{Int, Bool}
+    next_constr_index::Int64
+    constrs::Dict{Int64, JuMP.AbstractConstraint}
+    constr_to_name::Dict{Int64, String}
+    name_to_constr::Union{Dict{String, Int64}, Nothing}
+    constr_in_var_info::Dict{Int64, Bool}
 
     # Objective Data
     objective_sense::MOI.OptimizationSense
@@ -222,29 +231,29 @@ Solver name: No optimizer attached.
 """
 function InfiniteModel(; kwargs...)
     return InfiniteModel(# Measures
-                         0, Dict{Int, Measure}(), Dict{Int, String}(),
-                         Dict{Int, Vector{Int}}(), Dict{Int, Vector{Int}}(),
-                         Dict{Int, Bool}(),
+                         0, Dict{Int64, Measure}(), Dict{Int64, String}(),
+                         Dict{Int64, Vector{Int64}}(), Dict{Int64, Vector{Int64}}(),
+                         Dict{Int64, Bool}(),
                          # Parameters
-                         0, 0, Dict{Int, InfOptParameter}(), Dict{Int, String}(),
-                         nothing, Dict{Int, Int}(), Dict{Int, Vector{Int}}(),
-                         Dict{Int, Vector{Int}}(), Dict{Int, Vector{Int}}(),
+                         0, 0, Dict{Int64, InfOptParameter}(), Dict{Int64, String}(),
+                         nothing, Dict{Int64, Int64}(), Dict{Int64, Vector{Int64}}(),
+                         Dict{Int64, Vector{Int64}}(), Dict{Int64, Vector{Int64}}(),
                          # Variables
-                         0, Dict{Int, JuMP.AbstractVariable}(),
-                         Dict{Int, String}(), nothing, Dict{Int, Int}(),
-                         Dict{Int, Int}(), Dict{Int, Int}(), Dict{Int, Int}(),
-                         Dict{Int, Int}(), Dict{Int, Vector{Int}}(),
-                         Dict{Int, Vector{Int}}(), Dict{Int, Bool}(),
-                         Dict{Int, Vector{Int}}(), Dict{Int, Vector{Int}}(),
+                         0, Dict{Int64, JuMP.AbstractVariable}(),
+                         Dict{Int64, String}(), nothing, Dict{Int64, Int64}(),
+                         Dict{Int64, Int64}(), Dict{Int64, Int64}(), Dict{Int64, Int64}(),
+                         Dict{Int64, Int64}(), Dict{Int64, Vector{Int64}}(),
+                         Dict{Int64, Vector{Int64}}(), Dict{Int64, Bool}(),
+                         Dict{Int64, Vector{Int64}}(), Dict{Int64, Vector{Int64}}(),
                          # Placeholder variables
-                         Dict{Int, Vector{Int}}(), Dict{Int, Vector{Int}}(),
-                         Dict{Int, Tuple}(),
+                         Dict{Int64, Vector{Int64}}(), Dict{Int64, Vector{Int64}}(),
+                         Dict{Int64, Tuple}(),
                          # Constraints
-                         0, Dict{Int, JuMP.AbstractConstraint}(),
-                         Dict{Int, String}(), nothing, Dict{Int, Bool}(),
+                         0, Dict{Int64, JuMP.AbstractConstraint}(),
+                         Dict{Int64, String}(), nothing, Dict{Int64, Bool}(),
                          # Objective
                          MOI.FEASIBILITY_SENSE,
-                         zero(JuMP.GenericAffExpr{Float64, FiniteVariableRef}),
+                         zero(JuMP.GenericAffExpr{Float64, InfOptVariableRef}),
                          # Object dictionary
                          Dict{Symbol, Any}(),
                          # Optimize data
@@ -284,100 +293,23 @@ Base.broadcastable(model::InfiniteModel) = Ref(model)
 JuMP.object_dictionary(model::InfiniteModel) = model.obj_dict
 
 """
-    GeneralVariableRef <: JuMP.AbstractVariableRef
-
-An abstract type to for variable references used with infinite models.
-"""
-abstract type GeneralVariableRef <: JuMP.AbstractVariableRef end
-
-"""
-    MeasureFiniteVariableRef <: GeneralVariableRef
-
-An abstract type to define finite variable and measure references.
-"""
-abstract type MeasureFiniteVariableRef <: GeneralVariableRef end
-
-"""
-    FiniteVariableRef <: GeneralVariableRef
-
-An abstract type to define new finite variable references.
-"""
-abstract type FiniteVariableRef <: MeasureFiniteVariableRef end
-
-"""
-    GlobalVariableRef <: FiniteVariableRef
-
-A DataType for finite fixed variable references (e.g., first stage variables,
-steady-state variables).
+    InfOptVariableRef <: JuMP.AbstractVariableRef
+A DataType for untranscripted references of all types (parameters, variables,
+measures, etc.).
 
 **Fields**
 - `model::InfiniteModel` Infinite model.
-- `index::Int` Index of variable in model.
+- `index::Int64` Index of variable in model.
+- `type::Symbol` Type of variable
 """
-struct GlobalVariableRef <: FiniteVariableRef
+struct InfOptVariableRef <: JuMP.AbstractVariableRef
     model::InfiniteModel
-    index::Int
+    index::Int64
+    type::Symbol
 end
 
-"""
-    PointVariableRef <: FiniteVariableRef
-
-A DataType for variables defined at a transcipted point (e.g., second stage
-variable at a particular scenario, dynamic variable at a discretized time point).
-
-**Fields**
-- `model::InfiniteModel` Infinite model.
-- `index::Int` Index of variable in model.
-"""
-struct PointVariableRef <: FiniteVariableRef
-    model::InfiniteModel
-    index::Int
-end
-
-"""
-    InfiniteVariableRef <: GeneralVariableRef
-
-A DataType for untranscripted infinite dimensional variable references (e.g.,
-second stage variables, time dependent variables).
-
-**Fields**
-- `model::InfiniteModel` Infinite model.
-- `index::Int` Index of variable in model.
-"""
-struct InfiniteVariableRef <: GeneralVariableRef
-    model::InfiniteModel # `model` owning the variable
-    index::Int           # Index in `model.variables`
-end
-
-"""
-    ReducedInfiniteVariableRef <: GeneralVariableRef
-
-A DataType for partially transcripted infinite dimensional variable references.
-This is used to expand measures that contain infinite variables that are not
-fully transcripted by the measure.
-
-**Fields**
-- `model::InfiniteModel` Infinite model.
-- `index::Int` Index of variable in model.
-"""
-struct ReducedInfiniteVariableRef <: GeneralVariableRef
-    model::InfiniteModel
-    index::Int
-end
-
-"""
-    ParameterRef <: GeneralVariableRef
-
-A DataType for untranscripted infinite parameters references that parameterize
-the infinite variables.
-
-**Fields**
-- `model::InfiniteModel` Infinite model.
-- `index::Int` Index of variable in model.
-"""
-struct ParameterRef <: GeneralVariableRef
-    model::InfiniteModel
-    index::Int
+function variable_type(vref::InfOptVariableRef)::Symbol
+    return vref.type
 end
 
 """
@@ -405,13 +337,13 @@ defined in [`InfiniteVariable`](@ref)
 
 **Fields**
 - `info::JuMP.VariableInfo{S, T, U, V}` JuMP Variable information.
-- `infinite_variable_ref::InfiniteVariableRef` The infinite variable associated
+- `infinite_variable_ref::InfOptVariableRef` The infinite variable associated
                                                with the point variable.
 - `parameter_values::Tuple` The infinite parameter values defining the point.
 """
 struct PointVariable{S, T, U, V} <: InfOptVariable
     info::JuMP.VariableInfo{S, T, U, V}
-    infinite_variable_ref::InfiniteVariableRef
+    infinite_variable_ref::InfOptVariableRef
     parameter_values::Tuple
 end
 
@@ -433,44 +365,22 @@ A DataType for storing reduced infinite variable information.
 
 **Fields**
 - `infinite_variable_ref::InfiniteVariableRef` The original infinite variable.
-- `eval_supports::Dict{Int, Union{Number, JuMP.Containers.SparseAxisArray{<:Number}}}`
+- `eval_supports::Dict{Int64, Union{Number, JuMP.Containers.SparseAxisArray{<:Number}}}`
   The original parameter tuple indices to the evaluation supports.
 """
 struct ReducedInfiniteInfo <: AbstractReducedInfo
-    infinite_variable_ref::InfiniteVariableRef
-    eval_supports::Dict{Int, Union{Number,
+#    infinite_variable_ref::InfiniteVariableRef
+    infinite_variable_ref::InfOptVariableRef
+    eval_supports::Dict{Int64, Union{Number,
                                    JuMPC.SparseAxisArray{<:Number}}}
 end
 
-# Define variable references without that aren't measures
-const InfOptVariableRef = Union{InfiniteVariableRef, PointVariableRef,
-                                GlobalVariableRef}
 
 # Define infinite expressions
-const InfiniteExpr = Union{InfiniteVariableRef, ReducedInfiniteVariableRef,
-                           JuMP.GenericAffExpr{Float64, InfiniteVariableRef},
-                           JuMP.GenericAffExpr{Float64, GeneralVariableRef},
-                           JuMP.GenericAffExpr{Float64, ReducedInfiniteVariableRef},
-                           JuMP.GenericQuadExpr{Float64, InfiniteVariableRef},
-                           JuMP.GenericQuadExpr{Float64, GeneralVariableRef},
-                           JuMP.GenericQuadExpr{Float64, ReducedInfiniteVariableRef}}
-const ParameterExpr = Union{ParameterRef,
-                            JuMP.GenericAffExpr{Float64, ParameterRef},
-                            JuMP.GenericQuadExpr{Float64, ParameterRef}}
+const Expr = Union{InfOptVariableRef,
+                   JuMP.GenericAffExpr{Float64, InfOptVariableRef},
+                   JuMP.GenericQuadExpr{Float64, InfOptVariableRef}}
 
-"""
-    MeasureRef <: FiniteVariableRef
-
-A DataType for referring to measure abstractions.
-
-**Fields**
-- `model::InfiniteModel` Infinite model.
-- `index::Int` Index of variable in model.
-"""
-struct MeasureRef <: MeasureFiniteVariableRef
-    model::InfiniteModel
-    index::Int
-end
 
 """
     DiscreteMeasureData <: AbstractMeasureData
@@ -480,7 +390,7 @@ abstraction is of the form:
 ``measure = \\int_{\\tau \\in T} f(\\tau) w(\\tau) d\\tau \\approx \\sum_{i = 1}^N \\alpha_i f(\\tau_i) w(\\tau_i)``.
 
 **Fields**
-- `parameter_ref::ParameterRef` The infinite parameter over which the
+- `parameter_ref::InfOptVariableRef` The infinite parameter over which the
                                 integration occurs.
 - `coefficients::Vector{<:Number}` Coefficients ``\\alpha_i`` for the above
                                    measure abstraction.
@@ -491,12 +401,12 @@ abstraction is of the form:
                               input value of type `Number` to a scalar value.
 """
 struct DiscreteMeasureData <: AbstractMeasureData
-    parameter_ref::ParameterRef
+    parameter_ref::InfOptVariableRef
     coefficients::Vector{<:Number}
     supports::Vector{<:Number}
     name::String
     weight_function::Function
-    function DiscreteMeasureData(parameter_ref::ParameterRef,
+    function DiscreteMeasureData(parameter_ref::InfOptVariableRef,
                                  coeffs::Vector{<:Number},
                                  supports::Vector{<:Number},
                                  name::String, weight_func::Function)
@@ -523,7 +433,7 @@ abstraction is of the form:
 ``measure = \\int_{\\tau \\in T} f(\\tau) w(\\tau) d\\tau \\approx \\sum_{i = 1}^N \\alpha_i f(\\tau_i) w(\\tau_i)``.
 
 **Fields**
-- `parameter_ref::JuMP.Containers.SparseAxisArray{<:ParameterRef}` The infinite
+- `parameter_ref::JuMP.Containers.SparseAxisArray{<:InfOptVariableRef}` The infinite
    parameters over which the integration occurs.
 - `coefficients::Vector{<:Number}` Coefficients ``\\alpha_i`` for the above
                                    measure abstraction.
@@ -535,12 +445,12 @@ abstraction is of the form:
                               to a scalar value.
 """
 struct MultiDiscreteMeasureData <: AbstractMeasureData
-    parameter_ref::JuMPC.SparseAxisArray{<:ParameterRef}
+    parameter_ref::JuMPC.SparseAxisArray{<:InfOptVariableRef}
     coefficients::Vector{<:Number}
     supports::Vector{<:JuMPC.SparseAxisArray}
     name::String
     weight_function::Function
-    function MultiDiscreteMeasureData(parameter_ref::JuMPC.SparseAxisArray{<:ParameterRef},
+    function MultiDiscreteMeasureData(parameter_ref::JuMPC.SparseAxisArray{<:InfOptVariableRef},
                                       coeffs::Vector{<:Number},
                                       supports::Vector{<:JuMPC.SparseAxisArray},
                                       name::String, weight_func::Function)
@@ -571,13 +481,6 @@ struct MultiDiscreteMeasureData <: AbstractMeasureData
         return new(parameter_ref, coeffs, supports, name, weight_func)
     end
 end
-
-# Define finite measure expressions (note infinite expression take precedence)
-const MeasureExpr = Union{MeasureRef,
-                          JuMP.GenericAffExpr{Float64, MeasureRef},
-                          JuMP.GenericAffExpr{Float64, MeasureFiniteVariableRef},
-                          JuMP.GenericQuadExpr{Float64, MeasureRef},
-                          JuMP.GenericQuadExpr{Float64, MeasureFiniteVariableRef}}
 
 """
     IntervalSet <: AbstractInfiniteSet
@@ -626,14 +529,14 @@ parameters on which they depend.
 **Fields**
 - `func::F` The JuMP object.
 - `set::S` The MOI set.
-- `bounds::Dict{ParameterRef, IntervalSet}` A dictionary mapping parameter
-                                            references to an interval set.
+- `bounds::Dict{InfOptVariableRef, IntervalSet}` A dictionary mapping parameter
+                                                 references to an interval set.
 """
 struct BoundedScalarConstraint{F <: JuMP.AbstractJuMPScalar,
                                S <: MOI.AbstractScalarSet} <: JuMP.AbstractConstraint
     func::F
     set::S
-    bounds::Dict{ParameterRef, IntervalSet}
+    bounds::Dict{InfOptVariableRef, IntervalSet}
 end
 
 """
@@ -650,12 +553,12 @@ A DataType for constraints that contain infinite variables.
 
 **Fields**
 - `model::InfiniteModel` Infinite model.
-- `index::Int` Index of constraint in model.
+- `index::Int64` Index of constraint in model.
 - `shape::JuMP.AbstractShape` Shape of constraint
 """
 struct InfiniteConstraintRef{S <: JuMP.AbstractShape} <: GeneralConstraintRef
     model::InfiniteModel
-    index::Int
+    index::Int64
     shape::S
 end
 
@@ -671,7 +574,7 @@ A DataType for constraints that contain finite variables.
 """
 struct FiniteConstraintRef{S <: JuMP.AbstractShape} <: GeneralConstraintRef
     model::InfiniteModel
-    index::Int
+    index::Int64
     shape::S
 end
 
@@ -682,11 +585,11 @@ A DataType for constraints that contain finite variables and measures.
 
 **Fields**
 - `model::InfiniteModel` Infinite model.
-- `index::Int` Index of constraint in model.
+- `index::Int64` Index of constraint in model.
 - `shape::JuMP.AbstractShape` Shape of constraint
 """
 struct MeasureConstraintRef{S <: JuMP.AbstractShape} <: GeneralConstraintRef
     model::InfiniteModel
-    index::Int
+    index::Int64
     shape::S
 end

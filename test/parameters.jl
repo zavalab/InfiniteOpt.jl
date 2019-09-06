@@ -2,14 +2,14 @@
     # Define test model and pref
     m = InfiniteModel()
     m2 = InfiniteModel()
-    pref = ParameterRef(m, 1)
+    pref = InfOptVariableRef(m, 1, Parameter)
     # test variable compare
     @testset "(==)" begin
         @test pref == pref
-        @test pref == ParameterRef(m, 1)
-        @test !(pref == ParameterRef(m, 2))
-        @test !(pref == ParameterRef(m2, 1))
-        @test !(pref != ParameterRef(m, 1))
+        @test pref == InfOptVariableRef(m, 1, Parameter)
+        @test !(pref == InfOptVariableRef(m, 2, Parameter))
+        @test !(pref == InfOptVariableRef(m2, 1, Parameter))
+        @test !(pref != InfOptVariableRef(m, 1, Parameter))
     end
     # test copy(v)
     @testset "copy(v)" begin
@@ -17,11 +17,11 @@
     end
     # test copy(v, m)
     @testset "copy(v, m)" begin
-        @test copy(pref, m2) == ParameterRef(m2, 1)
+        @test copy(pref, m2) == InfOptVariableRef(m2, 1, Parameter)
     end
     # test broadcastable
     @testset "broadcastable" begin
-        @test isa(Base.broadcastable(pref), Base.RefValue{ParameterRef})
+        @test isa(Base.broadcastable(pref), Base.RefValue{InfOptVariableRef})
     end
 end
 
@@ -162,7 +162,7 @@ end
 # Test precursor functions needed for add_parameter
 @testset "Basic Reference Queries" begin
     m = InfiniteModel()
-    pref = ParameterRef(m, 1)
+    pref = InfOptVariableRef(m, 1, Parameter)
     # JuMP.index
     @testset "JuMP.index" begin
         @test JuMP.index(pref) == 1
@@ -236,7 +236,7 @@ end
     @testset "add_parameter" begin
         m = InfiniteModel()
         param = InfOptParameter(IntervalSet(0, 1), Number[], false)
-        expected = ParameterRef(m, 1)
+        expected = InfOptVariableRef(m, 1, Parameter)
         @test add_parameter(m, param) == expected
         @test m.params[1] isa InfOptParameter
         @test m.param_to_group_id[1] == 1
@@ -248,53 +248,60 @@ end
     m = InfiniteModel()
     # single parameter
     @testset "Single" begin
-        pref = ParameterRef(m, 1)
+        pref = InfOptVariableRef(m, 1, Parameter)
         @test @infinite_parameter(m, 0 <= a <= 1) == pref
         @test m.params[1].set == IntervalSet(0, 1)
         @test name(pref) == "a"
-        pref = ParameterRef(m, 2)
+        pref = InfOptVariableRef(m, 2, Parameter)
         @test @infinite_parameter(m, b in Normal(), supports = [1; 2]) == pref
         @test m.params[2].set == DistributionSet(Normal())
         @test m.params[2].supports == [1, 2]
-        pref = ParameterRef(m, 3)
+        pref = InfOptVariableRef(m, 3, Parameter)
         @test @infinite_parameter(m, c, set = IntervalSet(0, 1)) == pref
-        pref = ParameterRef(m, 4)
+        pref = InfOptVariableRef(m, 4, Parameter)
         @test @infinite_parameter(m, set = IntervalSet(0, 1),
                                   base_name = "d") == pref
         @test name(pref) == "d"
-        pref = ParameterRef(m, 5)
+        pref = InfOptVariableRef(m, 5, Parameter)
         @test @infinite_parameter(m, set = IntervalSet(0, 1)) == pref
         @test name(pref) == ""
     end
     # multiple parameters
     @testset "Array" begin
-        prefs = [ParameterRef(m, 6), ParameterRef(m, 7)]
+        prefs = [InfOptVariableRef(m, 6, Parameter),
+                 InfOptVariableRef(m, 7, Parameter)]
         @test @infinite_parameter(m, 0 <= e[1:2] <= 1) == prefs
         @test m.params[6].set == IntervalSet(0, 1)
         @test m.params[7].set == IntervalSet(0, 1)
-        prefs = [ParameterRef(m, 8), ParameterRef(m, 9)]
+        prefs = [InfOptVariableRef(m, 8, Parameter),
+                 InfOptVariableRef(m, 9, Parameter)]
         @test @infinite_parameter(m, [1:2], set = IntervalSet(0, 1)) == prefs
         @test m.params[8].set == IntervalSet(0, 1)
         @test m.params[9].set == IntervalSet(0, 1)
-        prefs = [ParameterRef(m, 10), ParameterRef(m, 11)]
+        prefs = [InfOptVariableRef(m, 10, Parameter),
+                 InfOptVariableRef(m, 11, Parameter)]
         sets = [IntervalSet(0, 1), IntervalSet(-1, 2)]
         @test @infinite_parameter(m, f[i = 1:2], set = sets[i]) == prefs
         @test m.params[10].set == IntervalSet(0, 1)
         @test m.params[11].set == IntervalSet(-1, 2)
-        prefs = [ParameterRef(m, 12), ParameterRef(m, 13)]
+        prefs = [InfOptVariableRef(m, 12, Parameter),
+                 InfOptVariableRef(m, 13, Parameter)]
         @test @infinite_parameter(m, [i = 1:2], set = sets[i]) == prefs
         @test m.params[12].set == IntervalSet(0, 1)
         @test m.params[13].set == IntervalSet(-1, 2)
-        prefs = [ParameterRef(m, 14), ParameterRef(m, 15)]
+        prefs = [InfOptVariableRef(m, 14, Parameter),
+                 InfOptVariableRef(m, 15, Parameter)]
         @test @infinite_parameter(m, [0, -1][i] <= g[i = 1:2] <= [1, 2][i]) == prefs
         @test m.params[14].set == IntervalSet(0, 1)
         @test m.params[15].set == IntervalSet(-1, 2)
-        prefs = [ParameterRef(m, 16), ParameterRef(m, 17)]
+        prefs = [InfOptVariableRef(m, 16, Parameter),
+                 InfOptVariableRef(m, 17, Parameter)]
         @test @infinite_parameter(m, 0 <= h[1:2] <= 1,
                                   independent = true) == prefs
         @test m.params[16].independent
         @test m.params[17].independent
-        prefs = [ParameterRef(m, 18), ParameterRef(m, 19)]
+        prefs = [InfOptVariableRef(m, 18, Parameter),
+                 InfOptVariableRef(m, 19, Parameter)]
         prefs = convert(JuMP.Containers.SparseAxisArray, prefs)
         @test @infinite_parameter(m, 0 <= i[1:2] <= 1,
                                   container = SparseAxisArray) == prefs
@@ -333,7 +340,7 @@ end
         @test used_by_measure(pref)
         delete!(m.param_to_meas, JuMP.index(pref))
     end
-    # used_by_measure
+    # used_by_variable
     @testset "used_by_variable" begin
         @test !used_by_variable(pref)
         m.param_to_vars[JuMP.index(pref)] = [1]
@@ -593,9 +600,9 @@ end
     # JuMP.is_valid
     @testset "JuMP.is_valid" begin
         @test is_valid(m, pref)
-        pref2 = ParameterRef(InfiniteModel(), 1)
+        pref2 = InfOptVariableRef(InfiniteModel(), 1, Parameter)
         @test !is_valid(m, pref2)
-        pref3 = ParameterRef(m, 5)
+        pref3 = InfOptVariableRef(m, 5, Parameter)
         @test !is_valid(m, pref3)
     end
     # supports (array)
