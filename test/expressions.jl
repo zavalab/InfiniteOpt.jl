@@ -6,7 +6,7 @@
     @infinite_variable(m, inf(par))
     @point_variable(m, inf(0), pt)
     @global_variable(m, glob)
-    meas = MeasureRef(m, 1)
+    meas = InfOptVariableRef(m, 1, MeasureRef)
     m.meas_to_name[1] = "meas"
     # test for variable reference
     @testset "Variable" begin
@@ -18,21 +18,21 @@
     @testset "AffExpr" begin
         # make expressions
         aff1 = meas + 2par + glob
-        aff2 = zero(GenericAffExpr{Float64, GeneralVariableRef})
+        aff2 = zero(GenericAffExpr{Float64, InfOptVariableRef})
         # test expressions
         @test InfiniteOpt._all_function_variables(aff1) == [meas, par, glob]
-        @test InfiniteOpt._all_function_variables(aff2) == GeneralVariableRef[]
+        @test InfiniteOpt._all_function_variables(aff2) == InfOptVariableRef[]
     end
     # test for GenericQuadExpr
     @testset "QuadExpr" begin
         # make expressions
         quad1 = pt^2 + inf * pt - meas + 2par + glob
         quad2 = pt^2 + inf * pt
-        quad3 = zero(GenericQuadExpr{Float64, GeneralVariableRef})
+        quad3 = zero(GenericQuadExpr{Float64, InfOptVariableRef})
         # test expressions
         @test InfiniteOpt._all_function_variables(quad1) == [meas, par, glob, pt, inf]
         @test InfiniteOpt._all_function_variables(quad2) == [pt, inf]
-        @test InfiniteOpt._all_function_variables(quad3) == GeneralVariableRef[]
+        @test InfiniteOpt._all_function_variables(quad3) == InfOptVariableRef[]
     end
     # test backup
     @testset "Fallback" begin
@@ -51,7 +51,7 @@ end
     @infinite_variable(m, inf2(par, par2))
     @point_variable(m, inf(0), pt)
     @global_variable(m, glob)
-    red = InfiniteOpt.ReducedInfiniteVariableRef(m, 42)
+    red = InfiniteOpt.InfOptVariableRef(m, 42, Reduced)
     # test AffExpr comparison
     @testset "Base.:(==) AffExpr" begin
         @test par + par2 + inf - 2 == par + (par2 + inf) - 2
@@ -81,7 +81,7 @@ end
     @infinite_variable(m, inf2(par, par2))
     @point_variable(m, inf(0), pt)
     @global_variable(m, glob)
-    red = InfiniteOpt.ReducedInfiniteVariableRef(m, 42)
+    red = InfiniteOpt.InfOptVariableRef(m, 42, Reduced)
     m.reduced_info[42] = ReducedInfiniteInfo(inf2, Dict(1 => 0.5))
     # test for finite variable reference
     @testset "FiniteVariable" begin
@@ -128,13 +128,13 @@ end
     @infinite_variable(m, inf(par))
     @point_variable(m, inf(0), pt)
     @global_variable(m, glob)
-    meas = MeasureRef(m, 1)
+    meas = InfOptVariableRef(m, 1, Measure)
     m.meas_to_name[1] = "meas"
     # test for GenericAffExpr
     @testset "AffExpr" begin
         # make expressions
         aff1 = meas + 2par + glob
-        aff2 = zero(GenericAffExpr{Float64, GeneralVariableRef})
+        aff2 = zero(GenericAffExpr{Float64, InfOptVariableRef})
         # test expressions
         @test isa(InfiniteOpt._remove_variable(aff1, glob), Nothing)
         @test !haskey(aff1.terms, glob)
@@ -144,16 +144,16 @@ end
     @testset "QuadExpr" begin
         # make expressions
         quad1 = pt^2 + inf * pt - meas + 2par + glob
-        quad2 = zero(GenericQuadExpr{Float64, GeneralVariableRef})
+        quad2 = zero(GenericQuadExpr{Float64, InfOptVariableRef})
         # test expressions
         quad = copy(quad1)
         @test isa(InfiniteOpt._remove_variable(quad, inf), Nothing)
         @test !haskey(quad.aff.terms, inf)
-        @test !haskey(quad.terms, UnorderedPair{GeneralVariableRef}(inf, pt))
+        @test !haskey(quad.terms, UnorderedPair{InfOptVariableRef}(inf, pt))
         quad = copy(quad1)
         @test isa(InfiniteOpt._remove_variable(quad, pt), Nothing)
-        @test !haskey(quad.terms, UnorderedPair{GeneralVariableRef}(inf, pt))
-        @test !haskey(quad.terms, UnorderedPair{GeneralVariableRef}(pt, pt))
+        @test !haskey(quad.terms, UnorderedPair{InfOptVariableRef}(inf, pt))
+        @test !haskey(quad.terms, UnorderedPair{InfOptVariableRef}(pt, pt))
         @test isa(InfiniteOpt._remove_variable(quad2, inf), Nothing)
     end
 end

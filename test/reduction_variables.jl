@@ -7,9 +7,9 @@
     @infinite_variable(m, 0 <= inf1(par1, par2) <= 1, Int)
     @infinite_variable(m, inf2(par1, par2) == 1, Bin, start = 0)
     index = m.next_var_index + 1
-    rvref1 = ReducedInfiniteVariableRef(m, index)
+    rvref1 = InfOptVariableRef(m, index, Reduced)
     m.reduced_info[index] = ReducedInfiniteInfo(inf1, Dict(1 => 1))
-    rvref2 = ReducedInfiniteVariableRef(m, index + 1)
+    rvref2 = InfOptVariableRef(m, index + 1, Reduced)
     m.reduced_info[index + 1] = ReducedInfiniteInfo(inf2, Dict(2 => 1))
     # test _reduced_info
     @testset "_reduced_info" begin
@@ -155,6 +155,6 @@
     @testset "JuMP.is_valid" begin
         @test is_valid(m, rvref1)
         @test is_valid(m, rvref2)
-        @test !is_valid(m, ReducedInfiniteVariableRef(m, 100))
+        @test !is_valid(m, InfOptVariableRef(m, 100, Reduced))
     end
 end

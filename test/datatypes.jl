@@ -87,33 +87,19 @@ end
 end
 
 # Test the constraint datatypes
-@testset "Unions" begin
-#    @test InfOptVariableRef <: GeneralVariableRef
-#    @test InfiniteExpr <: AbstractJuMPScalar
-#    @test ParameterExpr <: AbstractJuMPScalar
-#    @test MeasureExpr <: AbstractJuMPScalar
-    @test Expr <: AbstractJuMPScalar
-end
-
-# Test the constraint datatypes
 @testset "Constraints" begin
     m = InfiniteModel();
     # Bounded constraints
     @test BoundedScalarConstraint <: JuMP.AbstractConstraint
-#    pref = ParameterRef(m, 1);
     pref = InfOptVariableRef(m, 1, Parameter);
     dict = Dict(pref => IntervalSet(0, 1));
     @test BoundedScalarConstraint(zero(AffExpr), MOI.Integer(),
                                   dict).bounds[pref].lower_bound == 0.0
     # Abstract cosntraint refs
-    @test GeneralConstraintRef isa DataType
-    # Infinite constraint refs
-    @test InfiniteConstraintRef <: GeneralConstraintRef
-    @test InfiniteConstraintRef(m, 1, JuMP.ScalarShape()).index == 1
-    # Finite constraint refs
-    @test FiniteConstraintRef <: GeneralConstraintRef
-    @test FiniteConstraintRef(m, 1, JuMP.ScalarShape()).index == 1
-    # Measure constraint refs
-    @test MeasureConstraintRef <: GeneralConstraintRef
-    @test MeasureConstraintRef(m, 1, JuMP.ScalarShape()).index == 1
+    @test InfOptConstraintRef isa UnionAll
+    @test InfOptConstraintRef{JuMP.SymmetricMatrixShape} isa DataType
+    @test InfOptConstraintRef(m, 1, JuMP.ScalarShape(), Infinite).index == 1
+    @test InfOptConstraintRef(m, 1, JuMP.ScalarShape(), Infinite).type == Infinite
+    @test InfOptConstraintRef(m, 2, JuMP.ScalarShape(), Global).index == 2
+    @test InfOptConstraintRef(m, 2, JuMP.ScalarShape(), Global).type == Global
 end

@@ -180,7 +180,7 @@ end
     m.params[1] = param
     m.param_to_name[1] = "test"
     m.name_to_param = nothing
-    pref = ParameterRef(m, 1)
+    pref = InfOptVariableRef(m, 1, Parameter)
     # JuMP.name
     @testset "JuMP.name" begin
         @test name(pref) == "test"

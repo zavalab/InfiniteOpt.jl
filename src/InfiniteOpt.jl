@@ -64,7 +64,7 @@ eval_supports, used_by_reduced_variable
 export InfiniteExpr, ParameterExpr, MeasureExpr
 
 # Export constraint datatypes
-export GeneralConstraintRef, InfiniteConstraintRef, MeasureConstraintRef,
+export InfOptConstraintRef, InfiniteConstraintRef, MeasureConstraintRef,
 FiniteConstraintRef, BoundedScalarConstraint
 
 # Export measure datatypes

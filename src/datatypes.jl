@@ -1,11 +1,12 @@
 # Define variable and union types
-const Infinite = :Infinite
+const Infinite = :Infinite # this is for both variable and constraint refs
 const Point = :Point
 const Global = :Global
 const Parameter = :Parameter
-const MeasureRef = :MeasureRef
+const MeasureRef = :MeasureRef # this is for both variable and constraint refs
 const Reduced = :Reduced
 const Variables = Union{Val{Infinite}, Val{Point}, Val{Global}}
+const Finite = :Finite # this is for constraint refs only
 
 """
     AbstractInfiniteSet
@@ -308,6 +309,7 @@ struct InfOptVariableRef <: JuMP.AbstractVariableRef
     type::Symbol
 end
 
+# function that accesses the type of variable under an InfOptVariableRef
 function variable_type(vref::InfOptVariableRef)::Symbol
     return vref.type
 end
@@ -374,13 +376,6 @@ struct ReducedInfiniteInfo <: AbstractReducedInfo
     eval_supports::Dict{Int64, Union{Number,
                                    JuMPC.SparseAxisArray{<:Number}}}
 end
-
-
-# Define infinite expressions
-const Expr = Union{InfOptVariableRef,
-                   JuMP.GenericAffExpr{Float64, InfOptVariableRef},
-                   JuMP.GenericQuadExpr{Float64, InfOptVariableRef}}
-
 
 """
     DiscreteMeasureData <: AbstractMeasureData
@@ -540,56 +535,107 @@ struct BoundedScalarConstraint{F <: JuMP.AbstractJuMPScalar,
 end
 
 """
-    GeneralConstraintRef
+InfOptConstraintRef{S <: JuMP.AbstractShape}
 
-An abstract type for constraint references unique to InfiniteOpt.
-"""
-abstract type GeneralConstraintRef end
-
-"""
-InfiniteConstraintRef{S <: JuMP.AbstractShape} <: GeneralConstraintRef
-
-A DataType for constraints that contain infinite variables.
-
+A DataType for constraint references unique to InfiniteOpt. Types could be
+Infinite, Measure, or Finite
 **Fields**
 - `model::InfiniteModel` Infinite model.
 - `index::Int64` Index of constraint in model.
 - `shape::JuMP.AbstractShape` Shape of constraint
+- `type::Symbol`
 """
-struct InfiniteConstraintRef{S <: JuMP.AbstractShape} <: GeneralConstraintRef
+
+struct InfOptConstraintRef{S <: JuMP.AbstractShape}
     model::InfiniteModel
     index::Int64
     shape::S
+    type::Symbol
 end
 
-"""
-    FiniteConstraintRef{S <: JuMP.AbstractShape} <: GeneralConstraintRef
+# function that accesses the type of variable under a InfOptConstraintRef
+function constraint_type(cref::InfOptConstraintRef)::Symbol
+    return cref.type
+end
+# Type could be Infinite, Measure, Finite
 
-A DataType for constraints that contain finite variables.
-
-**Fields**
-- `model::InfiniteModel` Infinite model.
-- `index::Int` Index of constraint in model.
-- `shape::JuMP.AbstractShape` Shape of constraint
-"""
-struct FiniteConstraintRef{S <: JuMP.AbstractShape} <: GeneralConstraintRef
-    model::InfiniteModel
-    index::Int64
-    shape::S
+# Helper functions that check the type of an expression
+function _all_types_of_expr(expr::JuMP.GenericAffExpr)::Array{Symbol, 1}
+    return unique(variable_type.(expr.terms.keys))
 end
 
-"""
-    MeasureConstraintRef{S <: JuMP.AbstractShape} <: GeneralConstraintRef
+function _all_types_of_expr(expr::JuMP.GenericQuadExpr)::Array{Symbol, 1}
+    types = _all_types_of_expr(expr.aff)
+    types = cat(types, [variable_type(i.a) for i in expr.terms.keys],
+                       [variable_type(i.b) for i in expr.terms.keys], dims = 1)
+    return unique(types)
+end
 
-A DataType for constraints that contain finite variables and measures.
+function _is_single_type_expr(expr::JuMP.AbstractJuMPScalar, type::Symbol)::Bool
+    if expr isa InfOptVariableRef
+        return variable_type(expr) == type
+    elseif expr isa JuMP.GenericAffExpr{Float64, InfOptVariableRef} ||
+           expr isa JuMP.GenericQuadExpr{Float64, InfOptVariableRef}
+        types_of_expr = _all_types_of_expr(expr)
+        return length(types_of_expr) == 1 && type in types_of_expr
+    else
+        return false
+    end
+end
 
-**Fields**
-- `model::InfiniteModel` Infinite model.
-- `index::Int64` Index of constraint in model.
-- `shape::JuMP.AbstractShape` Shape of constraint
-"""
-struct MeasureConstraintRef{S <: JuMP.AbstractShape} <: GeneralConstraintRef
-    model::InfiniteModel
-    index::Int64
-    shape::S
+function _is_infinite_expr(expr::JuMP.AbstractJuMPScalar)::Bool
+    if expr isa InfOptVariableRef
+        return variable_type(expr) == Infinite || variable_type(expr) == Reduced
+    elseif expr isa JuMP.GenericAffExpr{Float64, InfOptVariableRef} ||
+           expr isa JuMP.GenericQuadExpr{Float64, InfOptVariableRef}
+        types_of_expr = _all_types_of_expr(expr)
+        return (Reduced in types_of_expr || Infinite in types_of_expr) &&
+                Parameter in types_of_expr
+    end
+    return false
+end
+
+function _is_measure_expr(expr::JuMP.AbstractJuMPScalar)::Bool
+    if expr isa InfOptVariableRef
+        return variable_type(expr) == MeasureRef
+    elseif expr isa JuMP.GenericAffExpr{Float64, InfOptVariableRef} ||
+           expr isa JuMP.GenericQuadExpr{Float64, InfOptVariableRef}
+        types_of_expr = _all_types_of_expr(expr)
+        if Infinite in types_of_expr || Reduced in types_of_expr ||
+                                        Parameter in types_of_expr
+            return false
+        elseif MeasureRef in types_of_expr
+            return true
+        end
+    end
+    return false
+end
+
+function _is_finite_expr(expr::JuMP.AbstractJuMPScalar)::Bool
+    if expr isa InfOptVariableRef
+        return variable_type(expr) == Point || variable_type(expr) == Global
+    elseif expr isa JuMP.GenericAffExpr{Float64, InfOptVariableRef} ||
+           expr isa JuMP.GenericQuadExpr{Float64, InfOptVariableRef}
+        types_of_expr = _all_types_of_expr(expr)
+        if Infinite in types_of_expr || Reduced in types_of_expr ||
+           Parameter in types_of_expr || MeasureRef in types_of_expr
+            return false
+        else
+            return true
+        end
+    end
+    return false
+end
+
+function _expr_constraint_type(expr::JuMP.AbstractJuMPScalar)::Symbol
+    if !(_is_infinite_expr(expr) && _is_measure_expr(expr) && _is_finite_expr(expr))
+        error("expr is not of any valid InfiniteOpt constraint type.")
+    end
+    if _is_infinite_expr(expr)
+        return Infinite
+    elseif _is_measure_expr(expr)
+        return MeasureRef
+    elseif _is_finite_expr(expr)
+        return Finite
+    end
 end

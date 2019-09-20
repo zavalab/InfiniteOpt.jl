@@ -69,8 +69,8 @@
     # test Base.copy for MeasureRefs
     @testset "Base.copy (MeasureRef)" begin
         m2 = InfiniteModel()
-        mref = MeasureRef(m, 1)
-        @test copy(mref, m2) == MeasureRef(m2, 1)
+        mref = InfOptVariableRef(m, 1, MeasureRef)
+        @test copy(mref, m2) == InfOptVariableRef(m2, 1, MeasureRef)
     end
 end
 
@@ -119,7 +119,7 @@ end
     m = InfiniteModel()
     @infinite_parameter(m, 0 <= par <= 1)
     data = DiscreteMeasureData(par, [1], [1])
-    mref = MeasureRef(m, 1)
+    mref = InfOptVariableRef(m, 1, MeasureRef)
     m.meas_to_name[1] = "test"
     m.measures[1] = Measure(par, data)
     # test name
@@ -134,8 +134,8 @@ end
     # test is_valid
     @testset "JuMP.is_valid" begin
         @test is_valid(m, mref)
-        @test !is_valid(m, MeasureRef(InfiniteModel(), 1))
-        @test !is_valid(m, MeasureRef(m, 2))
+        @test !is_valid(m, InfOptVariableRef(InfiniteModel(), 1, MeasureRef))
+        @test !is_valid(m, InfOptVariableRef(m, 2. MeasureRef))
     end
 end
 
@@ -150,7 +150,7 @@ end
     data = DiscreteMeasureData(par, [1], [1], name = "test")
     data2 = DiscreteMeasureData(pars, [1], [[1, 1]])
     meas = Measure(par + 2inf - x, data)
-    rv = ReducedInfiniteVariableRef(m, 42)
+    rv = InfOptVariableRef(m, 42, Reduced)
     # _make_meas_name
     @testset "_make_meas_name" begin
         @test InfiniteOpt._make_meas_name(meas) == "test(par + 2 inf(par) - x)"
@@ -158,7 +158,7 @@ end
     # test _update_var_meas_mapping
     @testset "_update_var_meas_mapping" begin
         # retrieve variables and parameters
-        mref = MeasureRef(m, 2)
+        mref = InfOptVariableRef(m, 2, MeasureRef)
         vars = [par, inf, x, mref, rv]
         # test initial reference
         @test isa(InfiniteOpt._update_var_meas_mapping(vars, 1), Nothing)
@@ -215,7 +215,7 @@ end
     end
     # test add_measure
     @testset "add_measure" begin
-        mref = MeasureRef(m, 1)
+        mref = InfOptVariableRef(m, 1, MeasureRef)
         @test add_measure(m, meas) == mref
         @test name(mref) == "test(par + 2 inf(par) - x)"
         @test m.var_to_meas[JuMP.index(inf)] == [1]
@@ -262,7 +262,7 @@ end
     @global_variable(m, x)
     m.reduced_info[-1] = ReducedInfiniteInfo(inf2, Dict(2 => 0.5))
     m.infinite_to_reduced[JuMP.index(inf2)] = [-1]
-    rv = ReducedInfiniteVariableRef(m, -1)
+    rv = InfOptVariableRef(m, -1, Reduced)
     # prepare measures
     data = DiscreteMeasureData(par, [1], [1])
     data2 = DiscreteMeasureData(par2, [1], [1])
@@ -383,7 +383,7 @@ end
         @test InfiniteOpt._model_from_expr(inf + par) == m
         @test InfiniteOpt._model_from_expr(inf^2) == m
         @test isa(InfiniteOpt._model_from_expr(zero(GenericAffExpr{Float64,
-                                                 GeneralVariableRef})), Nothing)
+                                                 InfOptVariableRef})), Nothing)
     end
     # test _add_supports_to_parameters (scalar)
     @testset "_add_supports_to_parameters (scalar)" begin
@@ -407,20 +407,20 @@ end
     # test measure
     @testset "measure" begin
         # test single use
-        mref = MeasureRef(m, 1)
+        mref = InfOptVariableRef(m, 1, MeasureRef)
         @test measure(inf + x, data) == mref
         @test name(mref) == "a(inf(par) + x)"
         @test supports(par) == [1]
         @test !m.meas_in_objective[1]
         # test nested use
-        mref2 = MeasureRef(m, 2)
-        mref3 = MeasureRef(m, 3)
+        mref2 = InfOptVariableRef(m, 2, MeasureRef)
+        mref3 = InfOptVariableRef(m, 3, MeasureRef)
         @test measure(inf + measure(inf2 + x, data2), data) == mref3
         @test name(mref3) == "a(inf(par) + b(inf2(par, par2) + x))"
         @test supports(par) == [1]
         @test supports(par2) == [1]
         # test vector parameter
-        mref4 = MeasureRef(m, 4)
+        mref4 = InfOptVariableRef(m, 4, MeasureRef)
         @test measure(inf4 + x, data3) == mref4
         @test name(mref4) == "c(inf4(pars) + x)"
         @test supports(pars[1]) == [1]
@@ -428,7 +428,7 @@ end
         # test errors
         @test_throws ErrorException measure(x, data)
         @test_throws ErrorException measure(zero(GenericAffExpr{Float64,
-                                                     GeneralVariableRef}), data)
+                                                     InfOptVariableRef}), data)
         @test_throws ErrorException measure(par2, data)
         @test_throws ErrorException measure(inf4 + measure(inf + x, data3), data)
     end
@@ -438,7 +438,7 @@ end
 @testset "Used" begin
     # initialize model and reference
     m = InfiniteModel()
-    mref = MeasureRef(m, 1)
+    mref = InfOptVariableRef(m, 1, MeasureRef)
     m.meas_in_objective[JuMP.index(mref)] = false
     # used_by_constraint
     @testset "used_by_constraint" begin

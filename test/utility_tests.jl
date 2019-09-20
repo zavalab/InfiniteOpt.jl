@@ -72,6 +72,7 @@ end
 end
 
 # Test the possible_convert functions
+#=
 @testset "_possible_convert" begin
     m = Model()
     @variable(m, x[1:2])
@@ -102,3 +103,4 @@ end
                                  quad)) == GenericQuadExpr{Float64, VariableRef}
     end
 end
+=#

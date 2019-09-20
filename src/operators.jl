@@ -1,3 +1,4 @@
+#=
 # TODO change operations to avoid nonlinear expressions obtained from operations done on measures
 
 ## GeneralVariableRef--GeneralVariableRef extensions for different types
@@ -258,3 +259,4 @@ function Base.:-(lhs::JuMP.GenericQuadExpr{C, V},
     result.aff.constant -= rhs.aff.constant
     return result
 end
+=#

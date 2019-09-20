@@ -1,10 +1,9 @@
 # Extend other Base functions
-function Base.:(==)(v::T, w::U)::Bool where {T :: InfOptVariableRef,
-                                             U :: InfOptVariableRef}
-    return v.model === w.model && v.index == w.index
-        && variable_type(v) == variable_type(w)
+function Base.:(==)(v::InfOptVariableRef, w::InfOptVariableRef)::Bool
+    return v.model === w.model && v.index == w.index && variable_type(v) == variable_type(w)
 end
 
+Base.copy(v::InfOptVariableRef) = v
 Base.broadcastable(v::InfOptVariableRef) = Ref(v)
 
 # Extend JuMP functions
@@ -85,8 +84,8 @@ function _check_tuple_shape(_error::Function,
                "those defined for the infinite variable.")
     end
     for i in eachindex(values)
-        if isa(prefs[i], InfOptVariableRef) && variable_type(prefs[i] == Parameter)
-                                            && !(isa(values[i], Number))
+        if (isa(prefs[i], InfOptVariableRef) && variable_type(prefs[i] == Parameter)
+                                             && !(isa(values[i], Number)))
             _error("The dimensions and array type of the infinite parameter " *
                    "values must match those defined for the infinite variable.")
         elseif isa(prefs[i], container) && !isa(values[i], container)
@@ -359,7 +358,7 @@ function _update_infinite_point_mapping(pvref::InfOptVariableRef,
     return
 end
 
-function _update_infinite_point_mapping(pvref::InfOptVariableRef, ::Val{Point}
+function _update_infinite_point_mapping(pvref::InfOptVariableRef, ::Val{Point},
                                         ivref::InfOptVariableRef, ::Val{Infinite})
     model = JuMP.owner_model(pvref)
     if haskey(model.infinite_to_points, JuMP.index(ivref))
@@ -494,12 +493,12 @@ julia> index(vref)
 JuMP.index(v::InfOptVariableRef)::Int64 = v.index
 
 # used_by_constraint for variables
-function used_by_constraint(vref::InfOptVariableRef, <:Variables)::Bool
+function used_by_constraint(vref::InfOptVariableRef, ::Variables)::Bool
     return haskey(JuMP.owner_model(vref).var_to_constrs, JuMP.index(vref))
 end
 
 # used_by_measure for variables
-function used_by_measure(vref::InfOptVariableRef, <:Variables)::Bool
+function used_by_measure(vref::InfOptVariableRef, ::Variables)::Bool
     return haskey(JuMP.owner_model(vref).var_to_meas, JuMP.index(vref))
 end
 
@@ -518,12 +517,12 @@ function used_by_objective(ref::InfOptVariableRef)::Bool
     return used_by_objective(ref, Val(variable_type(ref)))
 end
 
-function used_by_objective(vref::InfOptVariableRef, <:Variables)::Bool
+function used_by_objective(vref::InfOptVariableRef, ::Variables)::Bool
     return JuMP.owner_model(vref).var_in_objective[JuMP.index(vref)]
 end
 
 # is_used for point and global variables
-function is_used(vref::InfOptVariableRef, <:Variables)::Bool
+function is_used(vref::InfOptVariableRef, ::Variables)::Bool
     return used_by_measure(vref) || used_by_constraint(vref) || used_by_objective(vref)
 end
 
@@ -589,35 +588,8 @@ function used_by_reduced_variable(vref::InfOptVariableRef, ::Val{Infinite})::Boo
 end
 
 
-"""
-    JuMP.delete(model::InfiniteModel, vref::InfOptVariableRef, <:Variables)
-
-Extend [`JuMP.delete`](@ref) to delete `InfiniteOpt` variables and their
-dependencies. Errors if variable is invalid, meaning it has already been
-deleted or it belongs to another model.
-
-**Example**
-```julia
-julia> print(model)
-Min measure(g(t)*t) + z
-Subject to
- z >= 0.0
- g(t) + z >= 42.0
- g(0.5) == 0
- t in [0, 6]
-
-julia> delete(model, g)
-
-julia> print(model)
-Min measure(t) + z
-Subject to
- z >= 0.0
- z >= 42.0
- t in [0, 6]
-```
-"""
 # JuMP.delete for variables
-function JuMP.delete(model::InfiniteModel, vref::InfOptVariableRef, <:Variables)
+function JuMP.delete(model::InfiniteModel, vref::InfOptVariableRef, ::Variables)
     @assert JuMP.is_valid(model, vref) "Variable is invalid."
     # update the optimizer model status
     if is_used(vref)
@@ -722,7 +694,7 @@ end
 
 # JuMP.is_valid for variables
 function JuMP.is_valid(model::InfiniteModel, vref::InfOptVariableRef,
-                       <:Variables)::Bool
+                       ::Variables)::Bool
     return (model === JuMP.owner_model(vref) && JuMP.index(vref) in keys(model.vars))
 end
 
@@ -745,7 +717,7 @@ JuMP.num_variables(model::InfiniteModel)::Int = length(model.vars)
 include("variable_info.jl")
 
 # JuMP.name for variables
-function JuMP.name(vref::InfOptVariableRef, <:Variables)::String
+function JuMP.name(vref::InfOptVariableRef, ::Variables)::String
     return JuMP.owner_model(vref).var_to_name[JuMP.index(vref)]
 end
 
@@ -850,10 +822,6 @@ function _update_variable_param_values(vref::InfOptVariableRef, ::Val{Point},
 end
 
 # Get root name of infinite variable
-function _root_name(vref::InfOptVariableRef)
-    return _root_name(vref, Val(variable_type(vref)))
-end
-
 function _root_name(vref::InfOptVariableRef, ::Val{Infinite})
     name = JuMP.name(vref)
     return name[1:findfirst(isequal('('), name)-1]

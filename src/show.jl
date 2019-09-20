@@ -59,7 +59,7 @@ function JuMP.constraint_string(print_mode,
 end
 
 # Return a string for a constraint reference
-function JuMP.constraint_string(print_mode, ref::GeneralConstraintRef)
+function JuMP.constraint_string(print_mode, ref::InfOptConstraintRef)
     return JuMP.constraint_string(print_mode, JuMP.name(ref),
            JuMP.constraint_object(ref))
 end
@@ -100,13 +100,13 @@ function JuMP.objective_function_string(print_mode, model::InfiniteModel)
 end
 
 # Show constraint in REPLMode
-function Base.show(io::IO, ref::GeneralConstraintRef)
+function Base.show(io::IO, ref::InfOptConstraintRef)
     print(io, JuMP.constraint_string(JuMP.REPLMode, ref))
     return
 end
 
 # Show constraint in IJuliaMode
-function Base.show(io::IO, ::MIME"text/latex", ref::GeneralConstraintRef)
+function Base.show(io::IO, ::MIME"text/latex", ref::InfOptConstraintRef)
     print(io, JuMP.constraint_string(JuMP.IJuliaMode, ref))
     return
 end

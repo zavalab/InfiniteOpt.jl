@@ -1,3 +1,14 @@
+# function that extends JuMP.variable_ref_type
+function JuMP.variable_ref_type(expr::JuMP.GenericAffExpr{Float64, InfOptVariableRef})::
+                                                         AbstractArray{Symbol,1}
+    if length(expr.terms) == 0
+        return Array{Symbol, 1}()
+    else
+        return unique([variable_type(collect(keys(expr.terms))[i])
+                       for i in 1:length(expr.terms)])
+    end
+end
+
 """
     JuMP.set_objective_function(model::InfiniteModel,
                                 func::JuMP.AbstractJuMPScalar)
@@ -17,7 +28,8 @@ x + measure(g(t) + 2)
 function JuMP.set_objective_function(model::InfiniteModel,
                                      func::JuMP.AbstractJuMPScalar)
     # check the function
-    if isa(func, InfiniteExpr) || isa(func, ParameterExpr)
+    if Infinite in _all_types_of_expr(func) ||
+       Parameter in _all_types_of_expr(func)
         error("Objective function cannot contain infinite parameters/variables.")
     end
     JuMP.check_belongs_to_model(func, model)
@@ -33,9 +45,9 @@ function JuMP.set_objective_function(model::InfiniteModel,
     # update new mappings
     vrefs = _all_function_variables(func)
     for vref in vrefs
-        if isa(vref, InfOptVariableRef)
+        if isa(Val(variable_type(vref)), Variables)
             model.var_in_objective[JuMP.index(vref)] = true
-        elseif isa(vref, MeasureRef)
+        elseif variable_type(vref) == MeasureRef
             model.meas_in_objective[JuMP.index(vref)] = true
         end
     end
@@ -59,7 +71,7 @@ julia> objective_function(model)
 """
 function JuMP.set_objective_function(model::InfiniteModel, func::Real)
     # update function
-    model.objective_function = JuMP.GenericAffExpr{Float64, GlobalVariableRef}(func)
+    model.objective_function = JuMP.GenericAffExpr{Float64, InfOptVariableRef}(func)
     # delete old mappings
     for vindex in keys(model.var_in_objective)
         model.var_in_objective[vindex] = false
@@ -146,7 +158,7 @@ type of infinite model `model`.
 **Example**
 ```julia
 julia> objective_function_type(model)
-GenericAffExpr{Float64, FiniteVariableRef}
+GenericAffExpr{Float64, InfOptVariableRef}
 ```
 """
 function JuMP.objective_function_type(model::InfiniteModel)::Type{<:JuMP.AbstractJuMPScalar}
@@ -181,7 +193,7 @@ end
 
 """
     JuMP.set_objective_coefficient(model::InfiniteModel,
-                                   variable::GeneralVariableRef,
+                                   variable::InfOptVariableRef,
                                    coefficient::Real)
 
 Set the linear objective coefficient associated with `variable` to `coefficient`.
@@ -199,7 +211,7 @@ x + 2 y
 ```
 """
 function JuMP.set_objective_coefficient(model::InfiniteModel,
-                                        variable::GeneralVariableRef,
+                                        variable::InfOptVariableRef,
                                         coeff::Real)
     new_expr = _set_variable_coefficient!(JuMP.objective_function(model),
                                           variable, coeff)

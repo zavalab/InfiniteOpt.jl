@@ -225,7 +225,7 @@ macro infinite_parameter(model, args...)
                                                idxsets[i], i) ? () : idxsets[i])
 
         # Code to be used to create each variable of the container.
-        vartype = :( variable_type($esc_model, Parameter) )
+        vartype = :( JuMP.variable_type($esc_model, Parameter) )
         container_code, = JuMPC.generate_container(vartype, idxparams,
                                                     idxsets, requestedcontainer)
         buildcall = :( build_parameter($_error, $set, length($container_code),

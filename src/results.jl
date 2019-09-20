@@ -78,7 +78,7 @@ function JuMP.objective_value(model::InfiniteModel)::Float64
 end
 
 """
-    map_value(vref::GeneralVariableRef, key)
+    map_value(vref::InfOptVariableRef, key)
 
 Map the value of `vref` to its counterpart in the optimizer model type is
 distininguished by its extension key `key` as type `Val{ext_key_name}`.
@@ -86,23 +86,23 @@ distininguished by its extension key `key` as type `Val{ext_key_name}`.
 function map_value end
 
 """
-    JuMP.value(vref::GeneralVariableRef)
+    JuMP.value(vref::InfOptVariableRef)
 
 Get the value of this variable in the result returned by a solver. Use
 [`JuMP.has_values`](@ref) to check if a result exists before asking for values.
 """
-function JuMP.value(vref::GeneralVariableRef)
+function JuMP.value(vref::InfOptVariableRef)
     return map_value(vref, Val(optimizer_model_key(JuMP.owner_model(vref))))
 end
 
 """
-    JuMP.value(cref::GeneralConstraintRef)
+    JuMP.value(cref::InfOptConstraintRef)
 
 Get the value of this constraint in the result returned by a solver. Use
 [`JuMP.has_values`](@ref) to check if a result exists before asking for values.
 This returns the primal value of the constraint function.
 """
-function JuMP.value(cref::GeneralConstraintRef)
+function JuMP.value(cref::InfOptConstraintRef)
     return map_value(cref, Val(optimizer_model_key(JuMP.owner_model(cref))))
 end
 
@@ -117,31 +117,31 @@ references.
 function map_optimizer_index end
 
 """
-    JuMP.optimizer_index(vref::GeneralVariableRef)
+    JuMP.optimizer_index(vref::InfOptVariableRef)
 
 Return the index of the variables that corresponds to `vref` in the optimizer model.
 It throws [`NoOptimizer`](@ref) if no optimizer is set and throws an
 `ErrorException` if the optimizer is set but is not attached.
 """
-function JuMP.optimizer_index(vref::GeneralVariableRef)
+function JuMP.optimizer_index(vref::InfOptVariableRef)
     return map_optimizer_index(vref,
                                Val(optimizer_model_key(JuMP.owner_model(vref))))
 end
 
 """
-    JuMP.optimizer_index(cref::GeneralConstraintRef)
+    JuMP.optimizer_index(cref::InfOptConstraintRef)
 
 Return the index of the constraints that corresponds to `cref` in the optimizer model.
 It throws [`NoOptimizer`](@ref) if no optimizer is set and throws an
 `ErrorException` if the optimizer is set but is not attached.
 """
-function JuMP.optimizer_index(cref::GeneralConstraintRef)
+function JuMP.optimizer_index(cref::InfOptConstraintRef)
     return map_optimizer_index(cref,
                                Val(optimizer_model_key(JuMP.owner_model(cref))))
 end
 
 """
-    map_dual(cref::GeneralConstraintRef, key)
+    map_dual(cref::InfOptConstraintRef, key)
 
 Map the dual of `cref` to its counterpart in the optimizer model
 type distininguished by its extension key `key` as type `Val{ext_key_name}`.
@@ -149,18 +149,18 @@ type distininguished by its extension key `key` as type `Val{ext_key_name}`.
 function map_dual end
 
 """
-    dual(cref::GeneralConstraintRef)
+    dual(cref::InfOptConstraintRef)
 
 Get the dual value of this constraint in the result returned by a solver.
 Use `has_dual` to check if a result exists before asking for values.
 See also [`shadow_price`](@ref).
 """
-function JuMP.dual(cref::GeneralConstraintRef)
+function JuMP.dual(cref::InfOptConstraintRef)
     return map_dual(cref, Val(optimizer_model_key(JuMP.owner_model(cref))))
 end
 
 # Error redriect dor variable call
-function JuMP.dual(vref::GeneralVariableRef)
+function JuMP.dual(vref::InfOptVariableRef)
     error("To query the dual variables associated with a variable bound, first " *
           "obtain a constraint reference using one of `UpperBoundRef`, `LowerBoundRef`, " *
           "or `FixRef`, and then call `dual` on the returned constraint reference.\nFor " *
@@ -168,7 +168,7 @@ function JuMP.dual(vref::GeneralVariableRef)
 end
 
 """
-    map_shadow_price(cref::GeneralConstraintRef, key)
+    map_shadow_price(cref::InfOptConstraintRef, key)
 
 Map the shadow price of `cref` to its counterpart in the optimizer model
 type distininguished by its extension key `key` as type `Val{ext_key_name}`.
@@ -176,7 +176,7 @@ type distininguished by its extension key `key` as type `Val{ext_key_name}`.
 function map_shadow_price end
 
 """
-    JuMP.shadow_price(cref::GeneralConstraintRef)
+    JuMP.shadow_price(cref::InfOptConstraintRef)
 
 The change in the objective from an infinitesimal relaxation of the constraint.
 This value is computed from [`dual`](@ref) and can be queried only when
@@ -184,7 +184,7 @@ This value is computed from [`dual`](@ref) and can be queried only when
 (not `FEASIBILITY_SENSE`). For linear constraints, the shadow prices differ at
 most in sign from the `dual` value depending on the objective sense.
 """
-function JuMP.shadow_price(cref::GeneralConstraintRef)
+function JuMP.shadow_price(cref::InfOptConstraintRef)
     return map_shadow_price(cref,
                             Val(optimizer_model_key(JuMP.owner_model(cref))))
 end

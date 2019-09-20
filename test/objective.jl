@@ -22,36 +22,38 @@
     # test objective_function_type
     @testset "JuMP.objective_function_type" begin
         # test default
-        @test objective_function_type(m) == GenericAffExpr{Float64,
-                                                           FiniteVariableRef}
+        @test objective_function_type(m) == GenericAffExpr{Float64, InfOptVariableRef}
         # change function
         m.objective_function = x + meas + pt
         # test new function
-        @test objective_function_type(m) == GenericAffExpr{Float64,
-                                                       MeasureFiniteVariableRef}
+        @test objective_function_type(m) == GenericAffExpr{Float64, InfOptVariableRef}
+        types_in_objective = _expr_contain_type(objective_function(m))
+        @test Infinite in types_in_objective
+        @test MeasureRef in types_in_objective
+        @test Point in types_in_objective
         # undo changes
-        m.objective_function = zero(GenericAffExpr{Float64, FiniteVariableRef})
+        m.objective_function = zero(GenericAffExpr{Float64, InfOptVariableRef})
     end
     # test objective_function
     @testset "JuMP.objective_function" begin
         # test default
         @test objective_function(m) == zero(GenericAffExpr{Float64,
-                                                           FiniteVariableRef})
+                                                           InfOptVariableRef})
         # change function
         m.objective_function = x + meas + pt
         # test new function
         @test objective_function(m) == x + meas + pt
         # undo changes
-        m.objective_function = zero(GenericAffExpr{Float64, FiniteVariableRef})
+        m.objective_function = zero(GenericAffExpr{Float64, InfOptVariableRef})
     end
     # test objective_function (internal)
     @testset "JuMP.objective_function (internal)" begin
         # test normal
         @test objective_function(m, GenericAffExpr{Float64,
-                                    FiniteVariableRef}) == zero(GenericAffExpr{Float64,
-                                                                FiniteVariableRef})
+                                    InfOptVariableRef}) == zero(GenericAffExpr{Float64,
+                                                                InfOptVariableRef})
         # test new sense
-        @test_throws InexactError objective_function(m, GlobalVariableRef)
+        @test_throws InexactError objective_function(m, InfOptVariableRef)
     end
 end
 
@@ -96,7 +98,7 @@ end
         # test normal
         @test isa(set_objective_function(m, 3), Nothing)
         @test objective_function(m) == GenericAffExpr{Float64,
-                                                      GlobalVariableRef}(3)
+                                                      InfOptVariableRef}(3)
         @test !used_by_objective(x)
         @test !used_by_objective(pt)
         @test !used_by_objective(meas)
@@ -127,7 +129,7 @@ end
         # test normal
         @test isa(set_objective(m, MOI.MIN_SENSE, 3), Nothing)
         @test objective_function(m) == GenericAffExpr{Float64,
-                                                      GlobalVariableRef}(3)
+                                                      InfOptVariableRef}(3)
         @test objective_sense(m) == MOI.MIN_SENSE
         @test !used_by_objective(x)
         @test !used_by_objective(pt)

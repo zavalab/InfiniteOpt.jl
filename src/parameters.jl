@@ -263,7 +263,7 @@ true
 """
 # Function wrapper for is_used
 function is_used(pref::InfOptVariableRef)::Bool
-    return is_used(pref, ::Val(variable_type(pref)))
+    return is_used(pref, Val(variable_type(pref)))
 end
 
 # is_used for parameters
@@ -580,7 +580,7 @@ Returns true if the `InfiniteModel` stored in `ref` matches `model` and if
 function JuMP.is_valid(model::InfiniteModel, ref::InfOptVariableRef)::Bool
     return JuMP.is_valid(model::InfiniteModel,
                          ref::InfOptVariableRef,
-                         ::variable_type(ref))
+                         Val(variable_type(ref)))
 end
 
 # JuMP.is_valid for parameters
@@ -860,7 +860,7 @@ julia> upper_bound(t)
 """
 # Function wrapper for JuMP.upper_bound
 function JuMP.upper_bound(ref::InfOptVariableRef)::Number
-    return JuMP.upper_bound(ref, variable_type(ref))
+    return JuMP.upper_bound(ref, Val(variable_type(ref)))
 end
 
 # JuMP.upper_bound for parameters
@@ -950,7 +950,7 @@ julia> supports(t)
  1
 ```
 """
-function supports(pref::InfOptVariableRef)::Vector
+function supports(pref::InfOptVariableRef, ::Val{Parameter})::Vector
     !has_supports(pref) && error("Parameter $pref does not have supports.")
     return _parameter_supports(pref)
 end
@@ -1257,7 +1257,11 @@ function all_parameters(model::InfiniteModel)::Vector{InfOptVariableRef}
     return pref_list
 end
 
-## Define functions to extract the names of parameters
+## Define functions to extract the names of InfOptVariableRefs
+function _root_name(vref::InfOptVariableRef)
+    return _root_name(vref, Val(variable_type(vref)))
+end
+
 # Extract the root name of a parameter reference
 function _root_name(pref::InfOptVariableRef)::String
     name = JuMP.name(pref)
@@ -1303,7 +1307,7 @@ _only_one_group(pref::InfOptVariableRef)::Bool = true
 function _list_parameter_refs(prefs::Tuple)
     list = InfOptVariableRef[]
     for pref in prefs
-        if variable_type(pref) == Parameter
+        if pref isa InfOptVariableRef && variable_type(pref) == Parameter
             push!(list, pref)
         else
             for k in keys(pref.data)
