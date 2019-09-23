@@ -61,7 +61,7 @@ end
     end
     # variable_type(m)
     @testset "JuMP.variable_type(m)" begin
-        @test variable_type(m) == GeneralVariableRef
+        @test JuMP.variable_type(m) == InfOptVariableRef
     end
     # variable_type(m, t)
     @testset "JuMP.variable_type(m, t)" begin
@@ -70,7 +70,7 @@ end
         @test JuMP.variable_type(m, Global) == InfOptVariableRef
         @test JuMP.variable_type(m, Parameter) == InfOptVariableRef
         @test_throws ErrorException JuMP.variable_type(m, Reduced)
-        @test_throws ErrorException JuMP.variable_type(m, Measure)
+        @test_throws ErrorException JuMP.variable_type(m, MeasureRef)
         @test_throws ErrorException JuMP.variable_type(m, :bad)
     end
 end

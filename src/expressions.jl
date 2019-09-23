@@ -60,32 +60,32 @@ end
 =#
 ## Extend add_to_expression! for some more functionality, tested in test/operators.jl
 # Mixed variable addition
-function JuMP.add_to_expression!(quad::JuMP.GenericQuadExpr{InfOptVariableRef, InfOptVariableRef},
-                                 new_coef::InfOptVariableRef,
+function JuMP.add_to_expression!(quad::JuMP.GenericQuadExpr{C, InfOptVariableRef},
+                                 new_coef::C,
                                  new_var1::InfOptVariableRef,
-                                 new_var2::InfOptVariableRef)::JuMP.GenericQuadExpr
-#    type = _var_type_parser(Z, _var_type_parser(V, W))
-    key = JuMP.UnorderedPair{type}(new_var1, new_var2)
-    new_quad = convert(JuMP.GenericQuadExpr{C, type}, quad)
+                                 new_var2::InfOptVariableRef
+                                 )::JuMP.GenericQuadExpr where {C}
+    key = JuMP.UnorderedPair{InfOptVariableRef}(new_var1, new_var2)
+    new_quad = convert(JuMP.GenericQuadExpr{C, InfOptVariableRef}, quad)
     JuMP._add_or_set!(new_quad.terms, key, new_coef)
     return new_quad
 end
 
 # var1 is a number
-function JuMP.add_to_expression!(quad::JuMP.GenericQuadExpr{InfOptVariableRef, InfOptVariableRef},
+function JuMP.add_to_expression!(quad::JuMP.GenericQuadExpr{C, InfOptVariableRef},
                                  new_coef::Number, new_var1::Number,
-                                 new_var2::InfOptVariableRef)::JuMP.GenericQuadExpr
-#    type = _var_type_parser(Z, V)
-    new_quad = convert(JuMP.GenericQuadExpr{C, type}, quad)
+                                 new_var2::InfOptVariableRef
+                                 )::JuMP.GenericQuadExpr where {C}
+    new_quad = convert(JuMP.GenericQuadExpr{C, InfOptVariableRef}, quad)
     return JuMP.add_to_expression!(new_quad, new_coef * new_var1, new_var2)
 end
 
 # var2 is a number
-function JuMP.add_to_expression!(quad::JuMP.GenericQuadExpr{InfOptVariableRef, InfOptVariableRef},
+function JuMP.add_to_expression!(quad::JuMP.GenericQuadExpr{C, InfOptVariableRef},
                                  new_coef::Number, new_var1::InfOptVariableRef,
-                                 new_var2::Number)::JuMP.GenericQuadExpr
-#    type = _var_type_parser(Z, V)
-    new_quad = convert(JuMP.GenericQuadExpr{C, type}, quad)
+                                 new_var2::Number
+                                 )::JuMP.GenericQuadExpr where {C}
+    new_quad = convert(JuMP.GenericQuadExpr{C, InfOptVariableRef}, quad)
     return JuMP.add_to_expression!(new_quad, new_coef * new_var2, new_var1)
 end
 
@@ -274,7 +274,7 @@ function _has_variable(vrefs::Vector{InfOptVariableRef},
                        vref::InfOptVariableRef; prior=[])
     if vrefs[1] == vref
         return true
-    elseif isa(vrefs[1], MeasureRef)
+    elseif variable_type(vrefs[1]) == MeasureRef
         if length(vrefs) > 1
             return _has_variable(_all_function_variables(measure_function(vrefs[1])),
                           vref, prior = InfOptVariableRef[prior; vrefs[2:end]])

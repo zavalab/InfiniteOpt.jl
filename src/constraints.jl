@@ -59,7 +59,8 @@ function JuMP.build_constraint(_error::Function,
 end
 
 """
-    JuMP.build_constraint(_error::Function, expr::Expr,
+    JuMP.build_constraint(_error::Function,
+                          expr::Union{JuMP.GenericAffExpr, JuMP.GenericQuadExpr},
                           set::MOI.AbstractScalarSet;
                           [parameter_bounds::Dict{InfOptVariableRef,
                                                   IntervalSet} = Dict()])
@@ -78,7 +79,8 @@ julia> isa(constr, BoundedScalarConstraint)
 true
 ```
 """
-function JuMP.build_constraint(_error::Function, expr::Expr,
+function JuMP.build_constraint(_error::Function,
+                               expr::Union{JuMP.GenericAffExpr, JuMP.GenericQuadExpr},
                                set::MOI.AbstractScalarSet;
                                parameter_bounds::Dict{InfOptVariableRef,
                                                   IntervalSet} = default_bounds)
@@ -176,9 +178,10 @@ function JuMP.add_constraint(model::InfiniteModel, c::JuMP.AbstractConstraint,
                              name::String = "")
     isa(c, JuMP.VectorConstraint) && error("Vector constraints not supported.")
     JuMP.check_belongs_to_model(c.func, model)
+    if all_types_of_expr(c.func) == [Parameter]
+        error("Constraints cannot contain only parameters.")
+    end
     vrefs = _all_function_variables(c.func)
-    isa(vrefs, Vector{InfOptVariableRef}) && error("Constraints cannot contain " *
-                                                   "only parameters.")
     if isa(c, BoundedScalarConstraint)
         _check_bounds(model, c.bounds)
     end
@@ -191,10 +194,6 @@ function JuMP.add_constraint(model::InfiniteModel, c::JuMP.AbstractConstraint,
         cref = InfOptConstraintRef(model, index, JuMP.shape(c), Infinite)
     elseif _is_measure_expr(c.func)
         cref = InfOptConstraintRef(model, index, JuMP.shape(c), MeasureRef)
-    elseif _is_single_type_expr(c.func, Global)
-        cref = InfOptConstraintRef(model, index, JuMP.shape(c), Global)
-    elseif _is_single_type_expr(c.func, Point)
-        cref = InfOptConstraintRef(model, index, JuMP.shape(c), Point)
     else
         cref = InfOptConstraintRef(model, index, JuMP.shape(c), Finite)
     end
@@ -466,13 +465,6 @@ function _make_constraint_ref(model::InfiniteModel,
     elseif _is_measure_expr(model.constrs[index].func)
         return InfOptConstraintRef(model, index,
                                     JuMP.shape(model.constrs[index]), MeasureRef)
-    elseif _is_single_type_expr(model.constrs[index].func, Global)
-        return InfOptConstraintRef(model, index,
-                                    JuMP.shape(model.constrs[index]), Global)
-
-    elseif _is_single_type_expr(model.constrs[index].func, Point)
-        return InfOptConstraintRef(model, index,
-                                    JuMP.shape(model.constrs[index]), Point)
     else
         return InfOptConstraintRef(model, index,
                                     JuMP.shape(model.constrs[index]), Finite)
@@ -534,9 +526,14 @@ julia> num_constraints(model, GlobalVariableRef, MOI.LessThan)
 function JuMP.num_constraints(model::InfiniteModel, function_type::Symbol,
                               set_type::Type{<:MOI.AbstractSet})::Int64
     counter = 0
+    if function_type == Finite
+        function_type = [Global, Point]
+    else
+        function_type = [function_type]
+    end
     for (index, constr) in model.constrs
         if isa(constr.func, InfOptVariableRef) &&
-           variable_type(constr.func) == function_type &&
+           variable_type(constr.func) in function_type &&
            isa(constr.set, set_type)
             counter += 1
         end
@@ -569,7 +566,7 @@ julia> num_constraints(model, GlobalVariableRef)
 ```
 """
 function JuMP.num_constraints(model::InfiniteModel,
-                            function_type::Type{<:Union{Symbol, JuMP.AbstractJuMPScalar}})::Int64
+                            function_type::Union{Symbol, JuMP.AbstractJuMPScalar})::Int64
     return JuMP.num_constraints(model, function_type, MOI.AbstractSet)
 end
 
@@ -628,9 +625,14 @@ function JuMP.all_constraints(model::InfiniteModel, function_type::Symbol,
                            JuMP.num_constraints(model, function_type, set_type))
     indexes = sort(collect(keys(model.constrs)))
     counter = 1
+    if function_type == Finite
+        function_type = [Global, Point]
+    else
+        function_type = [function_type]
+    end
     for index in indexes
         if isa(model.constrs[index].func, InfOptVariableRef) &&
-           variable_type(model.constrs[index].func) == function_type
+           variable_type(model.constrs[index].func) in function_type && 
            isa(model.constrs[index].set, set_type)
             constr_list[counter] = _make_constraint_ref(model, index)
             counter += 1
@@ -673,7 +675,7 @@ julia> all_constraints(model, GlobalVariableRef)
 ```
 """
 function JuMP.all_constraints(model::InfiniteModel,
-                              function_type::Type{<:Union{Symbol, JuMP.AbstractJuMPScalar}}
+                              function_type::Union{Symbol, JuMP.AbstractJuMPScalar}
                               )::Vector{<:InfOptConstraintRef}
     return JuMP.all_constraints(model, function_type, MOI.AbstractSet)
 end

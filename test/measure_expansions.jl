@@ -9,8 +9,8 @@
     # test _make_point_variable
     @testset "_make_point_variable" begin
         idx = m.next_var_index + 1
-        @test InfiniteOpt._make_point_variable(inf1) == PointVariableRef(m,
-                                                                         idx)
+        @test InfiniteOpt._make_point_variable(inf1) == InfOptVariableRef(m,
+                                                                     idx, Point)
     end
     # test _make_reduced_variable (from ivref)
     @testset "_make_reduced_variable (from ivref)" begin
@@ -324,7 +324,7 @@ end
         # test single parameter with 2nd quadratic term becomes number
         expr = inf1 * par1 + 2
         idx = m.next_var_index + 1
-        pts = [PointVariableRef(m, idx), PointVariableRef(m, idx + 1)]
+        pts = [InfOptVariableRef(m, idx, Point), InfOptVariableRef(m, idx + 1, Point)]
         expected = zero(JuMP.GenericQuadExpr{Float64, InfOptVariableRef})
         expected.aff = 0.5 * (pts[1] + 2 * pts[2] + 4)
         @test InfiniteOpt._expand_measure(expr, data1, map_args...) == expected
@@ -336,7 +336,7 @@ end
         # test array parameter with first quadratic term becomes number
         expr = pars1[1] * inf4 + 2
         idx = m.next_var_index + 1
-        pts = [PointVariableRef(m, idx), PointVariableRef(m, idx + 1)]
+        pts = [InfOptVariableRef(m, idx, Point), InfOptVariableRef(m, idx + 1, Point)]
         expected = zero(JuMP.GenericQuadExpr{Float64, InfOptVariableRef})
         expected.aff = pts[1] + 2 * pts[2] + 4
         @test InfiniteOpt._expand_measure(expr, data3, map_args...) == expected
@@ -353,7 +353,7 @@ end
         # test array parameter with 2nd quadratic term becomes number
         expr = inf4 * pars1[1] + 2
         idx = m.next_var_index + 1
-        pts = [PointVariableRef(m, idx), PointVariableRef(m, idx + 1)]
+        pts = [InfOptVariableRef(m, idx, Point), InfOptVariableRef(m, idx + 1, Point)]
         expected = zero(JuMP.GenericQuadExpr{Float64, InfOptVariableRef})
         expected.aff = pts[1] + 2 * pts[2] + 4
         @test InfiniteOpt._expand_measure(expr, data3, map_args...) == expected
@@ -448,7 +448,7 @@ end
         pts = [InfOptVariableRef(m, idx, Point), InfOptVariableRef(m, idx + 1, Point)]
         rv1 = InfOptVariableRef(m, idx + 2, Reduced)
         m.reduced_info[idx + 2] = ReducedInfiniteInfo(inf2, Dict(1 => 1))
-        rv2 = InfOptVariableRef(m, idx + 3)
+        rv2 = InfOptVariableRef(m, idx + 3, Reduced)
         m.reduced_info[idx + 3] = ReducedInfiniteInfo(inf2, Dict(1 => 2))
         expected = 2inf4 + 7x + pts[1] + pts[2] - rv1 - rv2 + 2inf3 - 4
         @test InfiniteOpt._expand_measures(expr, map_args...) == expected

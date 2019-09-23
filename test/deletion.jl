@@ -8,7 +8,7 @@
     @global_variable(m, x)
     data = DiscreteMeasureData(par, [1], [1])
     meas = measure(inf + par - x, data)
-    rv = ReducedInfiniteVariableRef(m, 42)
+    rv = InfOptVariableRef(m, 42, Reduced)
     @constraint(m, cref, par - inf + pt + 2x - rv + meas <= 1)
     # test normal deletion
     @test isa(delete(m, cref), Nothing)
@@ -147,7 +147,7 @@ end
     @global_variable(m, x)
     m.reduced_info[-1] = ReducedInfiniteInfo(inf4, Dict(2 => 0.5))
     m.infinite_to_reduced[JuMP.index(inf4)] = [-1]
-    rv = ReducedInfiniteVariableRef(m, -1)
+    rv = InfOptVariableRef(m, -1, Reduced)
     data = DiscreteMeasureData(par, [1], [1])
     data2 = DiscreteMeasureData(pars, [1], [[1, 1]])
     meas = measure(inf + par - x + rv, data)
@@ -158,7 +158,7 @@ end
     @constraint(m, con, inf2 + inf4 - par2 <= 0)
     m.constrs[-1] = ScalarConstraint(par3, MOI.GreaterThan(0.))
     m.param_to_constrs[JuMP.index(par3)] = [-1]
-    con2 = InfiniteConstraintRef(m, -1, JuMP.shape(m.constrs[-1]))
+    con2 = InfOptConstraintRef(m, -1, JuMP.shape(m.constrs[-1]), Infinite)
     set_name(con2, "")
 
     # test _check_param_in_data (scalar)
@@ -386,17 +386,17 @@ end
      @global_variable(m, x)
      m.reduced_info[-1] = ReducedInfiniteInfo(inf, Dict(2 => 0.5))
      m.infinite_to_reduced[JuMP.index(inf)] = [-1]
-     rv = ReducedInfiniteVariableRef(m, -1)
+     rv = InfOptVariableRef(m, -1, Reduced)
      m.reduced_info[-2] = ReducedInfiniteInfo(inf, Dict(2 => 0.5))
      m.infinite_to_reduced[JuMP.index(inf)] = [-2]
-     rv2 = ReducedInfiniteVariableRef(m, -2)
+     rv2 = InfOptVariableRef(m, -2, Reduced)
      data = DiscreteMeasureData(par, [1], [1])
      meas = measure(inf + par - x + rv, data)
      meas2 = measure(rv2, data)
      @constraint(m, con, x + rv <= 0)
      m.constrs[-1] = ScalarConstraint(rv2, MOI.GreaterThan(0.))
      m.reduced_to_constrs[JuMP.index(rv2)] = [-1]
-     con2 = InfiniteConstraintRef(m, -1, JuMP.shape(m.constrs[-1]))
+     con2 = InfOptConstraintRef(m, -1, JuMP.shape(m.constrs[-1]), Infinite)
      set_name(con2, "")
      # test normal deletion
      @test isa(delete(m, rv), Nothing)
@@ -524,7 +524,7 @@ end
      @point_variable(m, x(0), x0)
      m.reduced_info[-1] = ReducedInfiniteInfo(x, Dict(1 => 0.5))
      m.infinite_to_reduced[JuMP.index(x)] = [-1]
-     rv = ReducedInfiniteVariableRef(m, -1)
+     rv = InfOptVariableRef(m, -1, Reduced)
      data = DiscreteMeasureData(par, [1], [1])
      meas1 = measure(x + y + par, data)
      meas2 = add_measure(m, Measure(y, data))
@@ -577,7 +577,7 @@ end
      @point_variable(m, x(0), x0)
      m.reduced_info[-1] = ReducedInfiniteInfo(x, Dict(1 => 0.5))
      m.infinite_to_reduced[JuMP.index(x)] = [-1]
-     rv = ReducedInfiniteVariableRef(m, -1)
+     rv = InfOptVariableRef(m, -1, Reduced)
      data = DiscreteMeasureData(par, [1], [1])
      meas = measure(x, data)
      meas1 = measure(x + x0 + rv + par + meas + y + par2, data)

@@ -75,7 +75,7 @@ end
     @testset "JuMP.set_name" begin
         # prepare constraint reference
         constr = ScalarConstraint(vref2, MOI.GreaterThan(0.))
-        cref = GeneralConstraintRef(m, 1, JuMP.shape(constr), variable_type(vref2))
+        cref = InfOptConstraintRef(m, 1, JuMP.shape(constr), Finite)
         # test function
         @test isa(set_name(cref, "bob"), Nothing)
         @test m.constr_to_name[1] == "bob"
@@ -86,7 +86,7 @@ end
     @testset "JuMP.index" begin
         # prepare constraint reference
         constr = ScalarConstraint(vref2, MOI.GreaterThan(0.))
-        cref = GeneralConstraintRef(m, 1, JuMP.shape(constr), variable_type(vref2))
+        cref = InfOptConstraintRef(m, 1, JuMP.shape(constr), Finite)
         # test function
         @test JuMP.index(cref) == 1
     end
@@ -94,7 +94,7 @@ end
     @testset "JuMP.add_constraint" begin
         # prepare constraint reference
         constr = ScalarConstraint(vref2, MOI.GreaterThan(0.))
-        expected = GeneralConstraintRef(m, 1, JuMP.shape(constr), variable_type(vref2))
+        expected = InfOptConstraintRef(m, 1, JuMP.shape(constr), Finite)
         # test function
         @test add_constraint(m, constr, "bob") == expected
         @test m.constrs[1] == constr
@@ -154,7 +154,7 @@ end
         # prepare constraint reference
         m.constr_to_name[1] = ""
         constr = ScalarConstraint(vref2, MOI.GreaterThan(0.))
-        expected = GeneralConstraintRef(m, 1, JuMP.shape(constr), variable_type(vref2))
+        expected = InfOptConstraintRef(m, 1, JuMP.shape(constr), Finite)
         # test for finite variable
         @test LowerBoundRef(vref2) == expected
         # prepare infinite variable
@@ -167,7 +167,7 @@ end
         # prepare lower bound constraint
         set_lower_bound(vref, 0)
         constr = ScalarConstraint(vref, MOI.GreaterThan(0.))
-        expected = GeneralConstraintRef(m, 3, JuMP.shape(constr), variable_type(vref))
+        expected = InfOptConstraintRef(m, 3, JuMP.shape(constr), Infinite)
         # test for infinite variable
         @test LowerBoundRef(vref) == expected
     end
@@ -197,7 +197,7 @@ end
     @testset "JuMP.add_constraint" begin
         # prepare constraint reference
         constr = ScalarConstraint(vref2, MOI.LessThan(0.))
-        expected = GeneralConstraintRef(m, 1, JuMP.shape(constr), variable_type(vref2))
+        expected = InfOptConstraintRef(m, 1, JuMP.shape(constr), Finite)
         # test function
         @test add_constraint(m, constr, "bob") == expected
         @test m.constrs[1] == constr
@@ -252,7 +252,7 @@ end
         # prepare constraint reference
         m.constr_to_name[1] = ""
         constr = ScalarConstraint(vref2, MOI.LessThan(0.))
-        expected = GeneralConstraintRef(m, 1, JuMP.shape(constr), variable_type(vref2))
+        expected = InfOptConstraintRef(m, 1, JuMP.shape(constr), Finite)
         # test for finite variable
         @test UpperBoundRef(vref2) == expected
         # prepare infinite variable
@@ -265,7 +265,7 @@ end
         # prepare Upper bound constraint
         set_upper_bound(vref, 0)
         constr = ScalarConstraint(vref, MOI.LessThan(0.))
-        expected = GeneralConstraintRef(m, 3, JuMP.shape(constr), variable_type(vref))
+        expected = InfOptConstraintRef(m, 3, JuMP.shape(constr), Infinite)
         # test for infinite variable
         @test UpperBoundRef(vref) == expected
     end
@@ -298,7 +298,7 @@ end
     @testset "JuMP.add_constraint" begin
         # prepare constraint reference
         constr = ScalarConstraint(vref2, MOI.EqualTo(0.))
-        expected = GeneralConstraintRef(m, 1, JuMP.shape(constr), variable_type(vref2))
+        expected = InfOptConstraintRef(m, 1, JuMP.shape(constr), Finite)
         # test function
         @test add_constraint(m, constr, "bob") == expected
         @test m.constrs[1] == constr
@@ -371,7 +371,7 @@ end
         # prepare constraint reference
         m.constr_to_name[1] = ""
         constr = ScalarConstraint(vref2, MOI.EqualTo(0.))
-        expected = GeneralConstraintRef(m, 1, JuMP.shape(constr), variable_type(vref2))
+        expected = InfOptConstraintRef(m, 1, JuMP.shape(constr), Finite)
         # test for finite variable
         @test FixRef(vref2) == expected
         # prepare infinite variable
@@ -384,7 +384,7 @@ end
         # prepare Upper bound constraint
         fix(vref, 0)
         constr = ScalarConstraint(vref, MOI.EqualTo(0.))
-        expected = GeneralConstraintRef(m, 7, JuMP.shape(constr), variable_type(vref))
+        expected = InfOptConstraintRef(m, 7, JuMP.shape(constr), Infinite)
         # test for infinite variable
         @test FixRef(vref) == expected
     end
@@ -434,7 +434,7 @@ end
     @testset "JuMP.add_constraint" begin
         # prepare constraint reference
         constr = ScalarConstraint(vref2, MOI.ZeroOne())
-        expected = GeneralConstraintRef(m, 1, JuMP.shape(constr), variable_type(vref2))
+        expected = InfOptConstraintRef(m, 1, JuMP.shape(constr), Finite)
         # test function
         @test add_constraint(m, constr, "bob") == expected
         @test m.constrs[1] == constr
@@ -482,7 +482,7 @@ end
         # prepare constraint reference
         m.constr_to_name[1] = ""
         constr = ScalarConstraint(vref2, MOI.ZeroOne())
-        expected = GeneralConstraintRef(m, 1, JuMP.shape(constr), variable_type(vref2))
+        expected = InfOptConstraintRef(m, 1, JuMP.shape(constr), Finite)
         # test for finite variable
         @test BinaryRef(vref2) == expected
         # prepare infinite variable
@@ -495,7 +495,7 @@ end
         # prepare Upper bound constraint
         set_binary(vref)
         constr = ScalarConstraint(vref, MOI.ZeroOne())
-        expected = GeneralConstraintRef(m, 3, JuMP.shape(constr), variable_type(vref))
+        expected = InfOptConstraintRef(m, 3, JuMP.shape(constr), Infinite)
         # test for infinite variable
         @test BinaryRef(vref) == expected
     end
@@ -525,7 +525,7 @@ end
     @testset "JuMP.add_constraint" begin
         # prepare constraint reference
         constr = ScalarConstraint(vref2, MOI.Integer())
-        expected = GeneralConstraintRef(m, 1, JuMP.shape(constr), variable_type(vref2))
+        expected = InfOptConstraintRef(m, 1, JuMP.shape(constr), Finite)
         # test function
         @test add_constraint(m, constr, "bob") == expected
         @test m.constrs[1] == constr
@@ -573,7 +573,7 @@ end
         # prepare constraint reference
         m.constr_to_name[1] = ""
         constr = ScalarConstraint(vref2, MOI.Integer())
-        expected = GeneralConstraintRef(m, 1, JuMP.shape(constr), variable_type(vref2))
+        expected = InfOptConstraintRef(m, 1, JuMP.shape(constr), Finite)
         # test for finite variable
         @test IntegerRef(vref2) == expected
         # prepare infinite variable
@@ -586,7 +586,7 @@ end
         # prepare Upper bound constraint
         set_integer(vref)
         constr = ScalarConstraint(vref, MOI.Integer())
-        expected = GeneralConstraintRef(m, 3, JuMP.shape(constr), variable_type(vref))
+        expected = InfOptConstraintRef(m, 3, JuMP.shape(constr), Infinite)
         # test for infinite variable
         @test IntegerRef(vref) == expected
     end

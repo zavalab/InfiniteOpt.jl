@@ -334,7 +334,7 @@ function _remove_parameter(prefs::Tuple, delete_pref::InfOptVariableRef)::Tuple
     end
     for i = 1:length(prefs)
         if _contains_pref(prefs[i], delete_pref)
-            if variable_type(prefs[i]) == Parameter
+            if isa(prefs[i], InfOptVariableRef) && variable_type(prefs[i]) == Parameter
                 return Tuple(prefs[j] for j = 1:length(prefs) if j != i), (i, )
             else
                 for (k, v) in prefs[i].data
@@ -367,7 +367,7 @@ function _update_infinite_variable(vref::InfOptVariableRef,
     JuMP.set_name(vref, _root_name(vref))
     if used_by_measure(vref)
         for mindex in JuMP.owner_model(vref).var_to_meas[JuMP.index(vref)]
-            JuMP.set_name(InfOptVariableRef(JuMP.owner_model(vref), mindex, Val(MeasureRef)),
+            JuMP.set_name(InfOptVariableRef(JuMP.owner_model(vref), mindex, MeasureRef),
                        _make_meas_name(JuMP.owner_model(vref).measures[mindex]))
         end
     end
@@ -403,7 +403,7 @@ function _update_point_variable(pvref::InfOptVariableRef,
     end
     if used_by_measure(pvref)
         for mindex in JuMP.owner_model(pvref).var_to_meas[JuMP.index(pvref)]
-            JuMP.set_name(InfOptVariableRef(JuMP.owner_model(pvref), mindex, Val(MeasureRef)),
+            JuMP.set_name(InfOptVariableRef(JuMP.owner_model(pvref), mindex, MeasureRef),
                       _make_meas_name(JuMP.owner_model(pvref).measures[mindex]))
         end
     end
@@ -438,7 +438,7 @@ function _update_reduced_variable(vref::InfOptVariableRef,
     end
     if used_by_measure(vref)
         for mindex in JuMP.owner_model(vref).reduced_to_meas[JuMP.index(vref)]
-            JuMP.set_name(InfOptVariableRef(JuMP.owner_model(vref), mindex, Val(MeasureRef)),
+            JuMP.set_name(InfOptVariableRef(JuMP.owner_model(vref), mindex, MeasureRef),
                        _make_meas_name(JuMP.owner_model(vref).measures[mindex]))
         end
     end
@@ -499,13 +499,14 @@ function JuMP.delete(model::InfiniteModel, pref::InfOptVariableRef, ::Val{Parame
         end
         # delete dependence of measures on pref
         for mindex in model.param_to_meas[JuMP.index(pref)]
-            if variable_type(model.measures[mindex].func) == Parameter
+            if isa(model.measures[mindex].func, InfOptVariableRef) &&
+               variable_type(model.measures[mindex].func) == Parameter
                 model.measures[mindex] = Measure(zero(JuMP.AffExpr),
                                                  model.measures[mindex].data)
             else
                 _remove_variable(model.measures[mindex].func, pref)
             end
-            JuMP.set_name(InfOptVariableRef(model, mindex, Val(MeasureRef)),
+            JuMP.set_name(InfOptVariableRef(model, mindex, MeasureRef),
                           _make_meas_name(model.measures[mindex]))
         end
         # delete mapping
@@ -533,8 +534,8 @@ function JuMP.delete(model::InfiniteModel, pref::InfOptVariableRef, ::Val{Parame
             # update any reduced variables that depend on vref accordingly
             if used_by_reduced_variable(vref)
                 for rindex in model.infinite_to_reduced[vindex]
-                    _update_reduced_variable(ReducedInfiniteVariableRef(model,
-                                                              rindex), location)
+                    _update_reduced_variable(InfOptVariableRef(model, rindex, Reduced),
+                                                                       location)
                 end
             end
         end
@@ -545,7 +546,8 @@ function JuMP.delete(model::InfiniteModel, pref::InfOptVariableRef, ::Val{Parame
     if used_by_constraint(pref)
         # update constraints in mapping to remove the parameter
         for cindex in model.param_to_constrs[JuMP.index(pref)]
-            if variable_type(model.constrs[cindex].func) == Parameter
+            if isa(model.constrs[cindex].func, InfOptVariableRef) &&
+               variable_type(model.constrs[cindex].func) == Parameter
                 model.constrs[cindex] = JuMP.ScalarConstraint(zero(JuMP.AffExpr),
                                                       model.constrs[cindex].set)
             else
@@ -1263,7 +1265,7 @@ function _root_name(vref::InfOptVariableRef)
 end
 
 # Extract the root name of a parameter reference
-function _root_name(pref::InfOptVariableRef)::String
+function _root_name(pref::InfOptVariableRef, ::Val{Parameter})::String
     name = JuMP.name(pref)
     first_bracket = findfirst(isequal('['), name)
     if first_bracket == nothing

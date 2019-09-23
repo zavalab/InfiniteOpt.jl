@@ -33,7 +33,7 @@ export InfiniteModel
 
 # Export macros and constants
 export @infinite_variable, @point_variable, @global_variable, @infinite_parameter,
-Infinite, Global, Point, Parameter, MeasureRef, Reduced, Finite
+Infinite, Global, Point, Parameter, Measure, Reduced
 
 # Export reference type
 export InfOptVariableRef
@@ -64,7 +64,8 @@ eval_supports, used_by_reduced_variable
 export InfiniteExpr, ParameterExpr, MeasureExpr
 
 # Export constraint datatypes
-export InfOptConstraintRef, BoundedScalarConstraint
+:qexport InfOptConstraintRef, InfiniteConstraintRef, MeasureConstraintRef,
+FiniteConstraintRef, BoundedScalarConstraint
 
 # Export measure datatypes
 export AbstractMeasureData, DiscreteMeasureData, MultiDiscreteMeasureData,
@@ -90,8 +91,6 @@ export map_value, map_optimizer_index, map_dual, map_shadow_price
 
 # Export functions that will be included in future JuMP releases
 
-# (Temporary) Export function for types in expressions
-export all_types_of_expr
 
 # Export printing methods
 export bound_string

@@ -109,6 +109,7 @@ end
 
 # Extend to return the index of the lower bound constraint associated with the
 # original infinite variable of `vref`.
+#=
 function JuMP._lower_bound_index(vref::InfOptVariableRef)::Int
     return JuMP._lower_bound_index(vref, Val(variable_type(vref)))
 end
@@ -125,7 +126,7 @@ function JuMP.LowerBoundRef(vref::InfOptVariableRef,
                             ::Val{Reduced})::InfOptConstraintRef
     return JuMP.LowerBoundRef(infinite_variable_ref(vref), Val(Infinite))
 end
-
+=#
 # JuMP.has_upper_bound for reduced variables
 function JuMP.has_upper_bound(vref::InfOptVariableRef, ::Val{Reduced})::Bool
     return JuMP.has_upper_bound(infinite_variable_ref(vref))
@@ -137,14 +138,6 @@ function JuMP.upper_bound(vref::InfOptVariableRef, ::Val{Reduced})::Float64
         error("Variable $(vref) does not have a upper bound.")
     end
     return JuMP.upper_bound(infinite_variable_ref(vref))
-end
-
-# JuMP._upper_bound_index for reduced variables
-function JuMP._upper_bound_index(vref::InfOptVariableRef, ::Val{Reduced})::Int
-    if !JuMP.has_upper_bound(vref)
-        error("Variable $(vref) does not have a upper bound.")
-    end
-    return JuMP._upper_bound_index(infinite_variable_ref(vref))
 end
 
 """
@@ -178,12 +171,8 @@ true
 ```
 """
 
-# JuMP.is_fixed for reduced variable reference
-function JuMP.is_fixed(vref::InfOptVariableRef, ::Val{Reduced})::Bool
-    return JuMP.is_fixed(infinite_variable_ref(vref))
-end
-
 # JuMP.fix_value for reduced variable refs
+#=
 function JuMP.fix_value(vref::InfOptVariableRef, ::Val{Reduced})::Float64
     if !JuMP.is_fixed(vref)
         error("Variable $(vref) is not fixed.")
@@ -204,7 +193,7 @@ function JuMP.FixRef(vref::InfOptVariableRef,
                      ::Val{Reduced})::InfOptConstraintRef
     return JuMP.FixRef(infinite_variable_ref(vref))
 end
-
+=#
 """
     JuMP.start_value(vref::InfOptVariableRef)::Union{Nothing, Float64}
 
@@ -217,9 +206,6 @@ julia> start_value(vref)
 0.0
 ```
 """
-function JuMP.start_value(vref::InfOptVariableRef)::Union{Nothing, Float64}
-    return JuMP.start_value(vref, Val(variable_type(vref)))
-end
 
 function JuMP.start_value(vref::InfOptVariableRef, ::Val{Reduced})::Union{Nothing, Float64}
     return JuMP.start_value(infinite_variable_ref(vref))
@@ -312,14 +298,14 @@ function JuMP.delete(model::InfiniteModel, vref::InfOptVariableRef, ::Val{Reduce
     # remove from measures if used
     if used_by_measure(vref)
         for mindex in model.reduced_to_meas[JuMP.index(vref)]
-#            if isa(model.measures[mindex].func, InfOptVariableRef)
-            if variable_type(model.measures[mindex].func) == Reduced
+            if isa(model.measures[mindex].func, InfOptVariableRef) &&
+               variable_type(model.measures[mindex].func) == Reduced
                 model.measures[mindex] = Measure(zero(JuMP.AffExpr),
                                                  model.measures[mindex].data)
             else
                 _remove_variable(model.measures[mindex].func, vref)
             end
-            JuMP.set_name(MeasureRef(model, mindex),
+            JuMP.set_name(InfOptVariableRef(model, mindex, MeasureRef),
                           _make_meas_name(model.measures[mindex]))
         end
         # delete mapping
@@ -328,8 +314,8 @@ function JuMP.delete(model::InfiniteModel, vref::InfOptVariableRef, ::Val{Reduce
     # remove from constraints if used
     if used_by_constraint(vref)
         for cindex in model.reduced_to_constrs[JuMP.index(vref)]
-#            if isa(model.constrs[cindex].func, InfOptVariableRef)
-            if variable_type(model.constrs[cindex].func) == Reduced
+            if isa(model.constrs[cindex].func, InfOptVariableRef) &&
+               variable_type(model.constrs[cindex].func) == Reduced
                 model.constrs[cindex] = JuMP.ScalarConstraint(zero(JuMP.AffExpr),
                                                       model.constrs[cindex].set)
             else

@@ -2,10 +2,10 @@
 @testset "Basic Extensions" begin
     # initialize the model, references, and other info
     m = InfiniteModel()
-    cref1 = GeneralConstraintRef(m, 1, ScalarShape(), Global)
-    cref2 = GeneralConstraintRef(m, 2, ScalarShape(), Infinite)
+    cref1 = InfOptConstraintRef(m, 1, ScalarShape(), Finite)
+    cref2 = InfOptConstraintRef(m, 2, ScalarShape(), Infinite)
     con = BoundedScalarConstraint(zero(AffExpr), MOI.EqualTo(0.0),
-                                  Dict{ParameterRef, IntervalSet}())
+                                  Dict{InfOptVariableRef, IntervalSet}())
     # owner_model
     @testset "JuMP.owner_model" begin
       @test owner_model(cref1) == m
@@ -29,9 +29,9 @@
     # test Base.:(==) of constraint references
     @testset "Base.:(==) References" begin
         @test !(cref1 == cref2)
-        @test cref1 == GeneralConstraintRef(m, 1, ScalarShape(), Global)
-        @test cref1 != GeneralConstraintRef(m, 2, ScalarShape(), Infinite)
-        @test cref1 != GeneralConstraintRef(InfiniteModel(), 1, ScalarShape(), Global)
+        @test cref1 == InfOptConstraintRef(m, 1, ScalarShape(), Finite)
+        @test cref1 != InfOptConstraintRef(m, 2, ScalarShape(), Infinite)
+        @test cref1 != InfOptConstraintRef(InfiniteModel(), 1, ScalarShape(), Finite)
     end
     # test broadcastable
     @testset "Base.broadcastable Reference" begin
@@ -39,7 +39,7 @@
     end
     # test constraint type
     @testset "JuMP.constraint_type" begin
-        @test constraint_type(m) == GeneralConstraintRef
+        @test constraint_type(m) == InfOptConstraintRef
     end
     # test shape
     @testset "shape" begin
@@ -65,7 +65,7 @@ end
     @global_variable(m, x)
     data = DiscreteMeasureData(par, [1], [1])
     meas = measure(inf + par - x, data)
-    cref = GeneralConstraintRef(m, 1, ScalarShape(), Finite)
+    cref = InfOptConstraintRef(m, 1, ScalarShape(), Finite)
     m.constr_to_name[1] = "test"
     # JuMP.name
     @testset "JuMP.name" begin
@@ -80,15 +80,15 @@ end
     @testset "_make_constraint_ref" begin
         # prepare for infinite constraint
         m.constrs[1] = ScalarConstraint(inf + par, MOI.LessThan(1.0))
-        @test InfiniteOpt._make_constraint_ref(m, 1) == GeneralConstraintRef(m,
+        @test InfiniteOpt._make_constraint_ref(m, 1) == InfOptConstraintRef(m,
                                                      1, ScalarShape(), Infinite)
         # prepare for measure constraint
         m.constrs[1] = ScalarConstraint(pt + meas, MOI.LessThan(1.0))
-        @test InfiniteOpt._make_constraint_ref(m, 1) == GeneralConstraintRef(m,
+        @test InfiniteOpt._make_constraint_ref(m, 1) == InfOptConstraintRef(m,
                                                    1, ScalarShape(), MeasureRef)
         # prepare for finite constraint
         m.constrs[1] = ScalarConstraint(pt + x, MOI.LessThan(1.0))
-        @test InfiniteOpt._make_constraint_ref(m, 1) == GeneralConstraintRef(m,
+        @test InfiniteOpt._make_constraint_ref(m, 1) == InfOptConstraintRef(m,
                                                        1, ScalarShape(), Finite)
     end
     # constraint_by_name
@@ -176,7 +176,7 @@ end
         @test isa(InfiniteOpt._check_bounds(m, Dict(par => IntervalSet(0, 1))),
                                                                         Nothing)
         # test errors
-        par2 = ParameterRef(InfiniteModel(), 2)
+        par2 = InfOptVariableRef(InfiniteModel(), 2, Parameter)
         @test_throws ErrorException InfiniteOpt._check_bounds(m,
                                                 Dict(par2 => IntervalSet(0, 1)))
         @test_throws ErrorException InfiniteOpt._check_bounds(m,
@@ -202,7 +202,7 @@ end
         # test bounded constraint
         con = BoundedScalarConstraint(inf + pt, MOI.EqualTo(42.0),
                                        Dict(par => IntervalSet(0, 1)))
-        @test add_constraint(m, con, "a") == GeneralConstraintRef(m, 1,
+        @test add_constraint(m, con, "a") == InfOptConstraintRef(m, 1,
                                                         ScalarShape(), Infinite)
         # test bad bounded constraint
         con = BoundedScalarConstraint(inf + pt, MOI.EqualTo(42.0),
@@ -210,29 +210,29 @@ end
         @test_throws ErrorException add_constraint(m, con, "a")
         # test infinite constraint
         con = ScalarConstraint(inf + pt, MOI.EqualTo(42.0))
-        @test add_constraint(m, con, "b") == GeneralConstraintRef(m, 2,
+        @test add_constraint(m, con, "b") == InfOptConstraintRef(m, 2,
                                                         ScalarShape(), Infinite)
         # test measure constraint
         con = ScalarConstraint(x + meas, MOI.EqualTo(42.0))
-        @test add_constraint(m, con, "c") == GeneralConstraintRef(m, 3,
+        @test add_constraint(m, con, "c") == InfOptConstraintRef(m, 3,
                                                       ScalarShape(), MeasureRef)
         # test finite constraint
         con = ScalarConstraint(x + pt, MOI.EqualTo(42.0))
-        @test add_constraint(m, con, "d") == GeneralConstraintRef(m, 4,
+        @test add_constraint(m, con, "d") == InfOptConstraintRef(m, 4,
                                                           ScalarShape(), Finite)
-        @test name(GeneralConstraintRef(m, 4, ScalarShape(), Finite)) == "d"
+        @test name(InfOptConstraintRef(m, 4, ScalarShape(), Finite)) == "d"
         @test !m.constr_in_var_info[4]
         @test !optimizer_model_ready(m)
     end
     # test macro
     @testset "JuMP.@constraint" begin
         # test scalar constraint
-        @test @constraint(m, e, x + pt -2 <= 2) == GeneralConstraintRef(m, 5,
+        @test @constraint(m, e, x + pt -2 <= 2) == InfOptConstraintRef(m, 5,
                                                           ScalarShape(), Finite)
         @test isa(m.constrs[5], ScalarConstraint)
         # test bounded scalar constraint
         @test @constraint(m, f, inf + meas <= 2,
-                          parameter_bounds = Dict(par => IntervalSet(0, 1))) == GeneralConstraintRef(m, 6, ScalarShape(), Infinite)
+                          parameter_bounds = Dict(par => IntervalSet(0, 1))) == InfOptConstraintRef(m, 6, ScalarShape(), Infinite)
         @test isa(m.constrs[6], BoundedScalarConstraint)
     end
 end
@@ -313,12 +313,12 @@ end
     @global_variable(m, 0 <= x <= 1, Int)
     # test search function type and set type
     @testset "Function and Set" begin
-        @test num_constraints(m, Global, MOI.LessThan) == 1
+        @test num_constraints(m, Finite, MOI.LessThan) == 1
         @test num_constraints(m, Infinite, MOI.GreaterThan) == 1
     end
     # test search function type
     @testset "Function" begin
-        @test num_constraints(m, Global) == 3
+        @test num_constraints(m, Finite) == 4
         @test num_constraints(m, Infinite) == 1
     end
     # test search set type
@@ -342,36 +342,37 @@ end
     @global_variable(m, 0 <= x <= 1, Int)
     # test search function type and set type
     @testset "Function and Set" begin
-        list = [GeneralConstraintRef(m, 4, ScalarShape(), Global)]
-        @test all_constraints(m, Global, MOI.LessThan) == list
-        list = [GeneralConstraintRef(m, 1, ScalarShape(), Infinite)]
+        list = [InfOptConstraintRef(m, 4, ScalarShape(), Finite)]
+        @test all_constraints(m, Finite, MOI.LessThan) == list
+        list = [InfOptConstraintRef(m, 1, ScalarShape(), Infinite)]
         @test all_constraints(m, Infinite, MOI.GreaterThan) == list
     end
     # test search function type
     @testset "Function" begin
-        list = [GeneralConstraintRef(m, 3, ScalarShape(), Global),
-                GeneralConstraintRef(m, 4, ScalarShape(), Global),
-                GeneralConstraintRef(m, 5, ScalarShape(), Global)]
-        @test all_constraints(m, Global) == list
-        list = [GeneralConstraintRef(m, 1, ScalarShape(), Infinite)]
+        list = [InfOptConstraintRef(m, 2, ScalarShape(), Finite),
+                InfOptConstraintRef(m, 3, ScalarShape(), Finite),
+                InfOptConstraintRef(m, 4, ScalarShape(), Finite),
+                InfOptConstraintRef(m, 5, ScalarShape(), Finite)]
+        @test all_constraints(m, Finite) == list
+        list = [InfOptConstraintRef(m, 1, ScalarShape(), Infinite)]
         @test all_constraints(m, Infinite) == list
     end
     # test search set type
     @testset "Set" begin
-        list = [GeneralConstraintRef(m, 4, ScalarShape(), Global)]
+        list = [InfOptConstraintRef(m, 4, ScalarShape(), Finite)]
         @test all_constraints(m, MOI.LessThan) == list
-        list = [GeneralConstraintRef(m, 1, ScalarShape(), Infinite),
-                GeneralConstraintRef(m, 2, ScalarShape(), Global),
-                GeneralConstraintRef(m, 3, ScalarShape(), Global)]
+        list = [InfOptConstraintRef(m, 1, ScalarShape(), Infinite),
+                InfOptConstraintRef(m, 2, ScalarShape(), Finite),
+                InfOptConstraintRef(m, 3, ScalarShape(), Finite)]
         @test all_constraints(m, MOI.GreaterThan) == list
     end
     # test search total
     @testset "Total" begin
-        list = [GeneralConstraintRef(m, 1, ScalarShape(), Infinite),
-                GeneralConstraintRef(m, 2, ScalarShape(), Global),
-                GeneralConstraintRef(m, 3, ScalarShape(), Global),
-                GeneralConstraintRef(m, 4, ScalarShape(), Global),
-                GeneralConstraintRef(m, 5, ScalarShape(), Global)]
+        list = [InfOptConstraintRef(m, 1, ScalarShape(), Infinite),
+                InfOptConstraintRef(m, 2, ScalarShape(), Finite),
+                InfOptConstraintRef(m, 3, ScalarShape(), Finite),
+                InfOptConstraintRef(m, 4, ScalarShape(), Finite),
+                InfOptConstraintRef(m, 5, ScalarShape(), Finite)]
         @test all_constraints(m) == list
     end
 end

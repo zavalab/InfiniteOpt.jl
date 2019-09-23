@@ -224,7 +224,7 @@ function _expand_measure(expr::JuMP.GenericAffExpr,
                          point_mapper::Function)::JuMP.AbstractJuMPScalar
     # need to use a quadratic expression in case contains measures with
     # quadratic expressions
-    quad = zero(JuMP.GenericQuadExpr{Float64, GeneralVariableRef})
+    quad = zero(JuMP.GenericQuadExpr{Float64, InfOptVariableRef})
     # expand each variable independently and add all together
     for (var, coef) in expr.terms
         JuMP.add_to_expression!(quad, coef, _expand_measure(var, data,
@@ -253,7 +253,7 @@ function _expand_measure(expr::JuMP.GenericQuadExpr,
                                      MultiDiscreteMeasureData},
                          trans_model::JuMP.AbstractModel,
                          point_mapper::Function)::JuMP.AbstractJuMPScalar
-    quad = zero(JuMP.GenericQuadExpr{Float64, GeneralVariableRef})
+    quad = zero(JuMP.GenericQuadExpr{Float64, InfOptVariableRef})
     # convert the GenericAffExpr
     quad.aff = _expand_measure(expr.aff, data, trans_model, point_mapper)
     for (pair, coef) in expr.terms
@@ -390,7 +390,7 @@ function expand(mref::InfOptVariableRef)::JuMP.AbstractJuMPScalar
     return expand(mref, Val(variable_type(mref)))
 end
 
-function expand(mref::InfOptVariable, ::Val{MeasureRef})::JuMP.AbstractJuMPScalar
+function expand(mref::InfOptVariableRef, ::Val{MeasureRef})::JuMP.AbstractJuMPScalar
     return _expand_measure(measure_function(mref), measure_data(mref),
                            JuMP.owner_model(mref), _add_mapped_point_variable)
 end
@@ -413,7 +413,7 @@ function _expand_measures(expr::JuMP.GenericAffExpr{C, InfOptVariableRef},
     quad.aff.constant = expr.constant
     # add the variables to the expr, converting measures into expanded exprs
     for (var, coef) in expr.terms
-        if isa(var, MeasureRef)
+        if variable_type(var) == MeasureRef
             JuMP.add_to_expression!(quad, coef, _expand_measure(measure_function(var),
                                                                 measure_data(var),
                                                                 expand_model,

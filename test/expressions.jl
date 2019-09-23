@@ -128,7 +128,7 @@ end
     @infinite_variable(m, inf(par))
     @point_variable(m, inf(0), pt)
     @global_variable(m, glob)
-    meas = InfOptVariableRef(m, 1, Measure)
+    meas = InfOptVariableRef(m, 1, MeasureRef)
     m.meas_to_name[1] = "meas"
     # test for GenericAffExpr
     @testset "AffExpr" begin

@@ -63,7 +63,7 @@
         @test isa(Measure(par, data1), Measure)
         @test Measure(par, data1).func == par
         @test isa(Measure(pars[1] + pars[2], data2),
-                  Measure{GenericAffExpr{Float64, ParameterRef},
+                  Measure{GenericAffExpr{Float64, InfOptVariableRef},
                           MultiDiscreteMeasureData})
     end
     # test Base.copy for MeasureRefs
@@ -135,7 +135,7 @@ end
     @testset "JuMP.is_valid" begin
         @test is_valid(m, mref)
         @test !is_valid(m, InfOptVariableRef(InfiniteModel(), 1, MeasureRef))
-        @test !is_valid(m, InfOptVariableRef(m, 2. MeasureRef))
+        @test !is_valid(m, InfOptVariableRef(m, 2, MeasureRef))
     end
 end
 

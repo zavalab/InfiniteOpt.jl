@@ -51,15 +51,19 @@ end
 
 # TODO modify to eliminate dictionaries if possible like SingleVariable in MOI
 # Extend to return the index of the lower bound constraint associated with `vref`.
-function JuMP._lower_bound_index(vref::InfOptVariableRef)::Int
+function JuMP._lower_bound_index(vref::InfOptVariableRef)::Int64
     if !JuMP.has_lower_bound(vref)
         error("Variable $(vref) does not have a lower bound.")
     end
-    return JuMP.owner_model(vref).var_to_lower_bound[JuMP.index(vref)]
+    if variable_type(vref) == Reduced
+        return JuMP._lower_bound_index(infinite_variable_ref(vref))
+    else
+        return JuMP.owner_model(vref).var_to_lower_bound[JuMP.index(vref)]
+    end
 end
 
 # Extend to specify the index `cindex` of a lower bound constraint for `vref`.
-function _set_lower_bound_index(vref::InfOptVariableRef, cindex::Int)
+function _set_lower_bound_index(vref::InfOptVariableRef, cindex::Int64)
     JuMP.owner_model(vref).var_to_lower_bound[JuMP.index(vref)] = cindex
     return
 end
@@ -101,19 +105,21 @@ var >= 0.0
 ```
 """
 
-# function wrapper for extension of JuMP.LowerBoundRef
 function JuMP.LowerBoundRef(vref::InfOptVariableRef)::InfOptConstraintRef
-    return JuMP.LowerBoundRef(vref, Val(variable_type(vref)))
-end
-
-# JuMP.LowerBoundRef for infinite variables
-function JuMP.LowerBoundRef(vref::InfOptVariableRef,
-                            ::Val{Infinite})::InfOptConstraintRef
+    if variable_type(vref) == Reduced
+        return JuMP.LowerBoundRef(infinite_variable_ref(vref))
+    end
     index = JuMP._lower_bound_index(vref)
     model = JuMP.owner_model(vref)
-    return InfOptConstraintRef(model, index, JuMP.shape(model.constrs[index]),
-                                variable_type(vref))
+    if _is_infinite_expr(model.constrs[index].func)
+        return InfOptConstraintRef(model, index,
+                                   JuMP.shape(model.constrs[index]), Infinite)
+    else
+        return InfOptConstraintRef(model, index,
+                                   JuMP.shape(model.constrs[index]), Finite)
+    end
 end
+
 
 """
     JuMP.delete_lower_bound(vref::InfOptVariableRef)
@@ -155,16 +161,15 @@ end
 
 # Extend to return the index of the upper bound constraint associated with the
 # infinite variable ref `vref` or the original variable ref associated with `vref`
-function JuMP._upper_bound_index(vref::InfOptVariableRef)::Int
-    return JuMP._upper_bound_index(vref, Val(variable_type(vref)))
-end
-
-# Extend to return the index of the upper bound constraint associated with `vref`.
-function JuMP._upper_bound_index(vref::InfOptVariableRef, ::Val{Infinite})::Int
+function JuMP._upper_bound_index(vref::InfOptVariableRef)::Int64
     if !JuMP.has_upper_bound(vref)
         error("Variable $(vref) does not have a upper bound.")
     end
-    return JuMP.owner_model(vref).var_to_upper_bound[JuMP.index(vref)]
+    if variable_type(vref) == Reduced
+        return JuMP._upper_bound_index(infinite_variable_ref(vref))
+    else
+        return JuMP.owner_model(vref).var_to_upper_bound[JuMP.index(vref)]
+    end
 end
 
 # Extend to specify the index `cindex` of a upper bound constraint for `vref`
@@ -209,19 +214,22 @@ julia> cref = UpperBoundRef(vref)
 var <= 1.0
 ```
 """
-# function wrapper for JuMP.UpperBoundRef
-function JuMP.UpperBoundRef(vref::InfOptVariableRef)::InfOptConstraintRef
-    return JuMP.UpperBoundRef(vref, variable_type(vref))
-end
 
-# JuMP.UpperBoundRef for infinite variable refs
-function JuMP.UpperBoundRef(vref::InfOptVariableRef,
-                            ::Val{Infinite})::InfOptConstraintRef
+function JuMP.UpperBoundRef(vref::InfOptVariableRef)::InfOptConstraintRef
+    if variable_type(vref) == Reduced
+        return JuMP.UpperBoundRef(infinite_variable_ref(vref))
+    end
     index = JuMP._upper_bound_index(vref)
     model = JuMP.owner_model(vref)
-    return InfOptConstraintRef(model, index, JuMP.shape(model.constrs[index]),
-                                variable_type(vref))
+    if _is_infinite_expr(model.constrs[index].func)
+        return InfOptConstraintRef(model, index,
+                                   JuMP.shape(model.constrs[index]), Infinite)
+    else
+        return InfOptConstraintRef(model, index,
+                                   JuMP.shape(model.constrs[index]), Finite)
+    end
 end
+
 
 """
     JuMP.delete_upper_bound(vref::InfOptVariableRef)
@@ -263,11 +271,12 @@ true
 """
 # function wrapper for extension of JuMP.is_fixed
 function JuMP.is_fixed(vref::InfOptVariableRef)::Bool
-    return JuMP.is_fixed(vref, Val(variable_type(vref)))
+    if variable_type(vref) == Reduced
+        return JuMP.is_fixed(infinite_variable_ref(vref))
+    else
+        return _variable_info(vref).has_fix
+    end
 end
-
-# JuMP.is_fixed for infinite variable refs
-JuMP.is_fixed(vref::InfOptVariableRef, ::Val{Infinite})::Bool = _variable_info(vref).has_fix
 
 """
     JuMP.fix_value(vref::InfOptVariableRef)::Float64
@@ -281,13 +290,10 @@ julia> fix_value(vref)
 0.0
 ```
 """
-# function wrapper for extension of JuMP.fix_value
 function JuMP.fix_value(vref::InfOptVariableRef)::Float64
-    return JuMP.fix_value(vref, Val(variable_type(vref)))
-end
-
-# JuMP.fix_value for infinite variable refs
-function JuMP.fix_value(vref::InfOptVariableRef, ::Val{Infinite})::Float64
+    if variable_type(vref) == Reduced
+        return JuMP.fix_value(infinite_variable_ref(vref))
+    end
     if !JuMP.is_fixed(vref)
         error("Variable $(vref) is not fixed.")
     end
@@ -295,12 +301,10 @@ function JuMP.fix_value(vref::InfOptVariableRef, ::Val{Infinite})::Float64
 end
 
 # Extend to return the index of the fix constraint associated with `vref`.
-function JuMP._fix_index(vref::InfOptVariableRef)::Int
-    return JuMP._fix_index(vref, Val(variable_type(vref)))
-end
-
-# JuMP._fix_index for infinite variable refs
-function JuMP._fix_index(vref::InfOptVariableRef)::Int
+function JuMP._fix_index(vref::InfOptVariableRef)::Int64
+    if variable_type(vref) == Reduced
+        return JuMP._fix_index(infinite_variable_ref(vref))
+    end
     if !JuMP.is_fixed(vref)
         error("Variable $(vref) is not fixed.")
     end
@@ -380,18 +384,19 @@ julia> cref = FixRef(vref)
 var == 1.0
 ```
 """
-# function wrapper for extension of JuMP.FixRef
 function JuMP.FixRef(vref::InfOptVariableRef)::InfOptConstraintRef
-    return JuMP.FixRef(vref, Val(variable_type(vref)))
-end
-
-# JuMP.FixRef for infinite variable refs
-function JuMP.FixRef(vref::InfOptVariableRef,
-                     ::Val{Infinite})::InfOptConstraintRef
+    if variable_type(vref) == Reduced
+        return JuMP.FixRef(infinite_variable_ref(vref))
+    end
     index = JuMP._fix_index(vref)
     model = JuMP.owner_model(vref)
-    return InfOptConstraintRef(model, index, JuMP.shape(model.constrs[index]),
-                                variable_type(vref))
+    if _is_infinite_expr(model.constrs[index].func)
+        return InfOptConstraintRef(model, index,
+                                   JuMP.shape(model.constrs[index]), Infinite)
+    else
+        return InfOptConstraintRef(model, index,
+                                   JuMP.shape(model.constrs[index]), Finite)
+    end
 end
 
 """
@@ -432,6 +437,10 @@ julia> start_value(vref)
 ```
 """
 function JuMP.start_value(vref::InfOptVariableRef)::Union{Nothing, Float64}
+    return JuMP.start_value(vref, Val(variable_type(vref)))
+end
+
+function JuMP.start_value(vref::InfOptVariableRef, ::Variables)::Union{Nothing, Float64}
     return _variable_info(vref).start
 end
 
@@ -480,18 +489,18 @@ function JuMP.is_binary(vref::InfOptVariableRef)::Bool
 end
 
 # JuMP.is_binary for infinite variable refs
-JuMP.is_binary(vref::InfOptVariableRef, ::Val{Infinite})::Bool = _variable_info(vref).binary
+JuMP.is_binary(vref::InfOptVariableRef, ::Val{})::Bool = _variable_info(vref).binary
 
 # Extend to return the index of the binary constraint associated with infinite
 # variable ref or the original infinite variable of the reduced variable ref
 
 # function wrapper for extension of JuMP._binary_index
-function JuMP._binary_index(vref::InfOptVariableRef)::Int
+function JuMP._binary_index(vref::InfOptVariableRef)::Int64
     return JuMP._binary_index(vref, Val(variable_type(vref)))
 end
 
 # JuMP._binary_index for infinite variable refs
-function JuMP._binary_index(vref::InfOptVariableRef, ::Val{Infinite})::Int
+function JuMP._binary_index(vref::InfOptVariableRef, ::Val{})::Int64
     if !JuMP.is_binary(vref)
         error("Variable $(vref) is not binary.")
     end
@@ -499,7 +508,7 @@ function JuMP._binary_index(vref::InfOptVariableRef, ::Val{Infinite})::Int
 end
 
 # Extend to specify the index of the binary constraint associated with `vref`.
-function _set_binary_index(vref::InfOptVariableRef, cindex::Int)
+function _set_binary_index(vref::InfOptVariableRef, cindex::Int64)
     JuMP.owner_model(vref).var_to_zero_one[JuMP.index(vref)] = cindex
     return
 end
@@ -552,8 +561,13 @@ var binary
 function JuMP.BinaryRef(vref::InfOptVariableRef)::InfOptConstraintRef
     index = JuMP._binary_index(vref)
     model = JuMP.owner_model(vref)
-    return InfOptConstraintRef(model, index, JuMP.shape(model.constrs[index]),
-                                variable_type(vref))
+    if _is_infinite_expr(model.constrs[index].func)
+        return InfOptConstraintRef(model, index,
+                                   JuMP.shape(model.constrs[index]), Infinite)
+    else
+        return InfOptConstraintRef(model, index,
+                                   JuMP.shape(model.constrs[index]), Finite)
+    end
 end
 
 """
@@ -584,8 +598,8 @@ end
 """
     JuMP.is_integer(vref::InfOptVariableRef)::Bool
 
-Extend [`JuMP.is_integer`](@ref) to return `Bool` whether an infinite variable
-or the original infinite variable associated with a reduced variable is integer.
+Extend [`JuMP.is_integer`](@ref) to return `Bool` whether an `InfiniteOpt`
+variable is integer.
 
 **Example**
 ```julia
@@ -599,7 +613,7 @@ function JuMP.is_integer(vref::InfOptVariableRef)::Bool
 end
 
 # JuMP.is_integer for infinite variable refs
-JuMP.is_integer(vref::InfOptVariableRef, ::Val{Infinite})::Bool = _variable_info(vref).integer
+JuMP.is_integer(vref::InfOptVariableRef, ::Val{})::Bool = _variable_info(vref).integer
 
 # Extend to return the index of the integer constraint associated with the
 # infinite variable or the original infinite variable of a reduced variable ref.
@@ -610,7 +624,7 @@ function JuMP._integer_index(vref::InfOptVariableRef)::Int
 end
 
 # JuMP._integer_index for infinite variable refs
-function JuMP._integer_index(vref::InfOptVariableRef, ::Val{Infinite})::Int
+function JuMP._integer_index(vref::InfOptVariableRef, ::Val{})::Int
     if !JuMP.is_integer(vref)
         error("Variable $(vref) is not an integer.")
     end
@@ -676,11 +690,16 @@ function JuMP.IntegerRef(vref::InfOptVariableRef)::InfOptConstraintRef
 end
 
 # JuMP.IntegerRef for infinite variable refs
-function JuMP.IntegerRef(vref::InfOptVariableRef)::InfOptConstraintRef
+function JuMP.IntegerRef(vref::InfOptVariableRef, ::Val{})::InfOptConstraintRef
     index = JuMP._integer_index(vref)
     model = JuMP.owner_model(vref)
-    return InfOptConstraintRef(model, index, JuMP.shape(model.constrs[index]),
-                                variable_type(vref))
+    if _is_infinite_expr(model.constrs[index].func)
+        return InfOptConstraintRef(model, index,
+                                   JuMP.shape(model.constrs[index]), Infinite)
+    else
+        return InfOptConstraintRef(model, index,
+                                   JuMP.shape(model.constrs[index]), Finite)
+    end
 end
 
 """

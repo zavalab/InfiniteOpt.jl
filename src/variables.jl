@@ -20,11 +20,17 @@ end
 
 # Check parameter tuple, ensure all elements contain parameter references
 function _check_parameter_tuple(_error::Function, prefs::Tuple)
-    types = [variable_type(pref) for pref in prefs]
+    for pref in prefs
+        if !(typeof(pref) <: InfOptVariableRef) &&
+           !(typeof(pref) <: JuMP.AbstractArray{InfOptVariableRef})
+            _error("Invalid parameter type(s) given.")
+        end
+    end
+    types = [variable_type.(pref) for pref in prefs]
     num_params = length(types)
     valid_types = zeros(Bool, num_params)
     for i in eachindex(types)
-        if types[i] == Parameter
+        if types[i] == Parameter || unique(types[i]) == [Parameter]
             valid_types[i] = true
         end
     end
@@ -38,8 +44,7 @@ end
 function _make_formatted_tuple(prefs::Tuple)::Tuple
     converted_prefs = ()
     for pref in prefs
-#        if isa(pref, ParameterRef) || isa(pref, Number)
-        if variable_type(pref) == Parameter || isa(pref, Number)
+        if isa(pref, InfOptVariableRef) || isa(pref, Number)
             converted_prefs = (converted_prefs..., pref)
         else
             converted_prefs = (converted_prefs...,
@@ -64,7 +69,6 @@ function _check_tuple_groups(_error::Function, prefs::Tuple)
 end
 
 # Ensure parameter values match shape of parameter reference tuple stored in the
-# infinite variable reference
 function _check_tuple_shape(_error::Function,
                             infinite_variable_ref::InfOptVariableRef,
                             values::Tuple)
@@ -73,6 +77,7 @@ function _check_tuple_shape(_error::Function,
     return
 end
 
+# infinite variable reference
 function _check_tuple_shape(_error::Function,
                             infinite_variable_ref::InfOptVariableRef,
                             ::Val{Infinite},
@@ -84,7 +89,7 @@ function _check_tuple_shape(_error::Function,
                "those defined for the infinite variable.")
     end
     for i in eachindex(values)
-        if (isa(prefs[i], InfOptVariableRef) && variable_type(prefs[i] == Parameter)
+        if (isa(prefs[i], InfOptVariableRef) && variable_type(prefs[i]) == Parameter
                                              && !(isa(values[i], Number)))
             _error("The dimensions and array type of the infinite parameter " *
                    "values must match those defined for the infinite variable.")
@@ -113,7 +118,8 @@ function _check_tuple_values(_error::Function,
                              param_values::Tuple)
     prefs = parameter_refs(inf_vref)
     for i in eachindex(prefs)
-        if variable_type(prefs[i]) == Parameter
+        if isa(prefs[i], InfOptVariableRef) &&
+           variable_type(prefs[i]) == Parameter
             if JuMP.has_lower_bound(prefs[i])
                 check1 = param_values[i] < JuMP.lower_bound(prefs[i])
                 check2 = param_values[i] > JuMP.upper_bound(prefs[i])
@@ -138,8 +144,7 @@ end
 
 # Update point variable info to consider the infinite variable
 function _update_point_info(info::JuMP.VariableInfo, ivref::InfOptVariableRef)
-    _update_point_info(info, ivref, Val(variable_type(ivref)))
-    return
+    return _update_point_info(info, ivref, Val(variable_type(ivref)))
 end
 
 function _update_point_info(info::JuMP.VariableInfo,
@@ -339,7 +344,7 @@ function _update_param_supports(inf_vref::InfOptVariableRef, ::Val{Infinite},
                                 param_values::Tuple)
     prefs = parameter_refs(inf_vref)
     for i in eachindex(prefs)
-        if variable_type(prefs[i]) == Parameter
+        if isa(prefs[i], InfOptVariableRef) && variable_type(prefs[i]) == Parameter
             add_supports(prefs[i], param_values[i])
         else
             for (k, v) in prefs[i].data
@@ -613,8 +618,8 @@ function JuMP.delete(model::InfiniteModel, vref::InfOptVariableRef, ::Variables)
     # remove dependencies from measures and update them
     if used_by_measure(vref)
         for mindex in model.var_to_meas[JuMP.index(vref)]
-#            if isa(model.measures[mindex].func, InfOptVariableRef)
-            if isa(Val(variable_type(model.measures[mindex].func)), Variables)
+            if isa(model.measures[mindex].func, InfOptVariableRef) &&
+               isa(Val(variable_type(model.measures[mindex].func)), Variables)
                 model.measures[mindex] = Measure(zero(JuMP.AffExpr),
                                                  model.measures[mindex].data)
             else
@@ -629,8 +634,8 @@ function JuMP.delete(model::InfiniteModel, vref::InfOptVariableRef, ::Variables)
     # remove dependencies from measures and update them
     if used_by_constraint(vref)
         for cindex in model.var_to_constrs[JuMP.index(vref)]
-#            if isa(model.constrs[cindex].func, InfOptVariableRef)
-            if isa(Val(variable_type(model.constrs[cindex].func)), Variables)
+            if isa(model.constrs[cindex].func, InfOptVariableRef) &&
+               isa(Val(variable_type(model.constrs[cindex].func)), Variables)
                 model.constrs[cindex] = JuMP.ScalarConstraint(zero(JuMP.AffExpr),
                                                       model.constrs[cindex].set)
             else
@@ -642,8 +647,8 @@ function JuMP.delete(model::InfiniteModel, vref::InfOptVariableRef, ::Variables)
     end
     # remove from objective if vref is in it
     if used_by_objective(vref)
-#        if isa(model.objective_function, InfOptVariableRef)
-        if isa(Val(variable_type(model.objective_function)), Variables)
+        if isa(model.objective_function, InfOptVariableRef) &&
+           isa(Val(variable_type(model.objective_function)), Variables)
             model.objective_function = zero(JuMP.AffExpr)
         else
             _remove_variable(model.objective_function, vref)
@@ -731,7 +736,7 @@ end
 # JuMP.set_name for point variables
 function JuMP.set_name(vref::InfOptVariableRef, ::Val{Point}, name::String)
     if length(name) == 0
-        inf_var_ref = infinite_variable_ref(vref, Point)
+        inf_var_ref = infinite_variable_ref(vref, Val(Point))
         name = _root_name(inf_var_ref)
         # TODO do something about SparseAxisArrays (report array of values in order)
         values = JuMP.owner_model(vref).vars[JuMP.index(vref)].parameter_values

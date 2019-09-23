@@ -28,8 +28,8 @@ x + measure(g(t) + 2)
 function JuMP.set_objective_function(model::InfiniteModel,
                                      func::JuMP.AbstractJuMPScalar)
     # check the function
-    if Infinite in _all_types_of_expr(func) ||
-       Parameter in _all_types_of_expr(func)
+    if Infinite in all_types_of_expr(func) ||
+       Parameter in all_types_of_expr(func)
         error("Objective function cannot contain infinite parameters/variables.")
     end
     JuMP.check_belongs_to_model(func, model)

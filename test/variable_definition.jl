@@ -75,8 +75,9 @@ end
         @test isa(InfiniteOpt._make_formatted_tuple((pref, prefs)), Tuple)
         @test isa(InfiniteOpt._make_formatted_tuple((pref, prefs))[2],
                   JuMP.Containers.SparseAxisArray)
-        @test isa(InfiniteOpt._make_formatted_tuple((pref, prefs))[1],
-                  ParameterRef)
+        first_pref = InfiniteOpt._make_formatted_tuple((pref, prefs))[1]
+        @test isa(first_pref, InfOptVariableRef) &&
+              JuMP.variable_type(pref) == Parameter
     end
     # _check_tuple_groups
     @testset "_check_tuple_groups" begin
@@ -246,8 +247,9 @@ end
     # JuMP.set_name
     @testset "JuMP.set_name" begin
         # prepare a secondary point variable
-        vref2 = InfOptVariableRef(m, 3, Point)
         m.vars[3] = var
+        m.var_to_name[3] = "var2"
+        vref2 = InfOptVariableRef(m, 3, Point)
         # test normal
         @test isa(set_name(vref, "new"), Nothing)
         @test name(vref) == "new"

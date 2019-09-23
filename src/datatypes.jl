@@ -7,6 +7,7 @@ const MeasureRef = :MeasureRef # this is for both variable and constraint refs
 const Reduced = :Reduced
 const Variables = Union{Val{Infinite}, Val{Point}, Val{Global}}
 const Finite = :Finite # this is for constraint refs only
+const VariableRef = :VariableRef # this denotes JuMP.VariableRef type
 
 """
     AbstractInfiniteSet
@@ -310,7 +311,7 @@ struct InfOptVariableRef <: JuMP.AbstractVariableRef
 end
 
 # function that accesses the type of variable under an InfOptVariableRef
-function variable_type(vref::InfOptVariableRef)::Symbol
+function JuMP.variable_type(vref::InfOptVariableRef)::Symbol
     return vref.type
 end
 
@@ -560,23 +561,32 @@ end
 # Type could be Infinite, Measure, Finite
 
 # Helper functions that check the type of an expression
-function _all_types_of_expr(expr::JuMP.GenericAffExpr)::Array{Symbol, 1}
+function all_types_of_expr(expr::InfOptVariableRef)::Array{Symbol, 1}
+    return [variable_type(expr)]
+end
+
+function all_types_of_expr(expr::JuMP.GenericAffExpr)::Array{Symbol, 1}
     return unique(variable_type.(expr.terms.keys))
 end
 
-function _all_types_of_expr(expr::JuMP.GenericQuadExpr)::Array{Symbol, 1}
-    types = _all_types_of_expr(expr.aff)
+function all_types_of_expr(expr::JuMP.GenericQuadExpr)::Array{Symbol, 1}
+    types = all_types_of_expr(expr.aff)
     types = cat(types, [variable_type(i.a) for i in expr.terms.keys],
                        [variable_type(i.b) for i in expr.terms.keys], dims = 1)
     return unique(types)
 end
+
+function all_types_of_expr(expr::JuMP.VariableRef)::Array{Symbol, 1}
+    return [VariableRef]
+end
+
 
 function _is_single_type_expr(expr::JuMP.AbstractJuMPScalar, type::Symbol)::Bool
     if expr isa InfOptVariableRef
         return variable_type(expr) == type
     elseif expr isa JuMP.GenericAffExpr{Float64, InfOptVariableRef} ||
            expr isa JuMP.GenericQuadExpr{Float64, InfOptVariableRef}
-        types_of_expr = _all_types_of_expr(expr)
+        types_of_expr = all_types_of_expr(expr)
         return length(types_of_expr) == 1 && type in types_of_expr
     else
         return false
@@ -588,9 +598,8 @@ function _is_infinite_expr(expr::JuMP.AbstractJuMPScalar)::Bool
         return variable_type(expr) == Infinite || variable_type(expr) == Reduced
     elseif expr isa JuMP.GenericAffExpr{Float64, InfOptVariableRef} ||
            expr isa JuMP.GenericQuadExpr{Float64, InfOptVariableRef}
-        types_of_expr = _all_types_of_expr(expr)
-        return (Reduced in types_of_expr || Infinite in types_of_expr) &&
-                Parameter in types_of_expr
+        types_of_expr = all_types_of_expr(expr)
+        return (Reduced in types_of_expr || Infinite in types_of_expr)
     end
     return false
 end
@@ -600,7 +609,7 @@ function _is_measure_expr(expr::JuMP.AbstractJuMPScalar)::Bool
         return variable_type(expr) == MeasureRef
     elseif expr isa JuMP.GenericAffExpr{Float64, InfOptVariableRef} ||
            expr isa JuMP.GenericQuadExpr{Float64, InfOptVariableRef}
-        types_of_expr = _all_types_of_expr(expr)
+        types_of_expr = all_types_of_expr(expr)
         if Infinite in types_of_expr || Reduced in types_of_expr ||
                                         Parameter in types_of_expr
             return false
@@ -616,13 +625,26 @@ function _is_finite_expr(expr::JuMP.AbstractJuMPScalar)::Bool
         return variable_type(expr) == Point || variable_type(expr) == Global
     elseif expr isa JuMP.GenericAffExpr{Float64, InfOptVariableRef} ||
            expr isa JuMP.GenericQuadExpr{Float64, InfOptVariableRef}
-        types_of_expr = _all_types_of_expr(expr)
+        types_of_expr = all_types_of_expr(expr)
         if Infinite in types_of_expr || Reduced in types_of_expr ||
            Parameter in types_of_expr || MeasureRef in types_of_expr
             return false
         else
             return true
         end
+    end
+    return false
+end
+
+function _is_parameter_expr(expr::JuMP.AbstractJuMPScalar)::Bool
+    if expr isa InfOptVariableRef
+        return variable_type(expr) == Parameter
+    elseif expr isa JuMP.GenericAffExpr{Float64, InfOptVariableRef} ||
+           expr isa JuMP.GenericQuadExpr{Float64, InfOptVariableRef}
+        types_of_expr = all_types_of_expr(expr)
+#        return types_of_expr == [Parameter]
+        return Parameter in types_of_expr && !(Infinite in types_of_expr) &&
+               !(Reduced in types_of_expr) && !(Measure in types_of_expr)
     end
     return false
 end

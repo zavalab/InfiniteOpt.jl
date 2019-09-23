@@ -27,8 +27,8 @@
         m.objective_function = x + meas + pt
         # test new function
         @test objective_function_type(m) == GenericAffExpr{Float64, InfOptVariableRef}
-        types_in_objective = _expr_contain_type(objective_function(m))
-        @test Infinite in types_in_objective
+        types_in_objective = all_types_of_expr(objective_function(m))
+        @test Global in types_in_objective
         @test MeasureRef in types_in_objective
         @test Point in types_in_objective
         # undo changes

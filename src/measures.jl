@@ -324,7 +324,8 @@ name1(g(t) - 1 + name2(T(t, x)))
 """
 function measure(expr::JuMP.AbstractJuMPScalar,
                  data::AbstractMeasureData)::InfOptVariableRef
-    if !isa(expr, Union{InfiniteExpr, MeasureExpr, ParameterExpr})
+#    if !isa(expr, Union{InfiniteExpr, MeasureExpr, ParameterExpr})
+    if !_is_infinite_expr(expr) && !_is_measure_expr(expr) && !_is_parameter_expr(expr)
         error("Expression must contain infinite variables, infinite " *
               "parameters, or measure references")
     end
@@ -340,21 +341,21 @@ function measure(expr::JuMP.AbstractJuMPScalar,
 end
 
 # used_by_constraint for measure
-function used_by_constraint(mref::InfOptVariableRef, ::Val{Measure})::Bool
+function used_by_constraint(mref::InfOptVariableRef, ::Val{MeasureRef})::Bool
     return haskey(JuMP.owner_model(mref).meas_to_constrs, JuMP.index(mref))
 end
 
 # used_by_measure for measure
-function used_by_measure(mref::InfOptVariableRef, ::Val{Measure})::Bool
+function used_by_measure(mref::InfOptVariableRef, ::Val{MeasureRef})::Bool
     return haskey(JuMP.owner_model(mref).meas_to_meas, JuMP.index(mref))
 end
 
-function used_by_objective(mref::InfOptVariableRef, ::Val{Measure})::Bool
+function used_by_objective(mref::InfOptVariableRef, ::Val{MeasureRef})::Bool
     return JuMP.owner_model(mref).meas_in_objective[JuMP.index(mref)]
 end
 
 # is_used for measures
-function is_used(mref::InfOptVariableRef, ::Val{Measure})::Bool
+function is_used(mref::InfOptVariableRef, ::Val{MeasureRef})::Bool
     return used_by_measure(mref) || used_by_constraint(mref) || used_by_objective(mref)
 end
 
@@ -399,7 +400,8 @@ function JuMP.delete(model::InfiniteModel, mref::InfOptVariableRef, ::Val{Measur
     # Remove from dependent measures if there are any
     if used_by_measure(mref)
         for mindex in model.meas_to_meas[JuMP.index(mref)]
-            if isa(model.measures[mindex].func, MeasureRef)
+            if isa(model.measures[mindex].func, InfOptVariableRef) &&
+               variable_type(model.measures[mindex].func) == MeasureRef
                 data = model.measures[mindex].data
                 model.measures[mindex] = Measure(zero(JuMP.AffExpr), data)
             else
@@ -413,7 +415,8 @@ function JuMP.delete(model::InfiniteModel, mref::InfOptVariableRef, ::Val{Measur
     # Remove from dependent constraints if there are any
     if used_by_constraint(mref)
         for cindex in model.meas_to_constrs[JuMP.index(mref)]
-            if variable_type(model.constrs[cindex].func) == MeasureRef
+            if isa(model.constrs[cindex].func, InfOptVariableRef) &&
+               variable_type(model.constrs[cindex].func) == MeasureRef
                 model.constrs[cindex] = JuMP.ScalarConstraint(zero(JuMP.AffExpr),
                                                       model.constrs[cindex].set)
             else
@@ -424,7 +427,8 @@ function JuMP.delete(model::InfiniteModel, mref::InfOptVariableRef, ::Val{Measur
     end
     # Remove from objective if used there
     if used_by_objective(mref)
-        if isa(model.objective_function, MeasureRef)
+        if isa(model.objective_function, InfOptVariableRef) &&
+           variable_type(model.objective_function) == MeasureRef
             model.objective_function = zero(JuMP.AffExpr)
         else
             _remove_variable(model.objective_function, mref)
