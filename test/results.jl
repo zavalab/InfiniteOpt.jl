@@ -45,24 +45,17 @@
         @test primal_status(m) == MOI.FEASIBLE_POINT
     end
     # test dual_status
-<<<<<<< HEAD
-    @testset "JuMP.dul_status" begin
-=======
     @testset "JuMP.dual_status" begin
->>>>>>> 4e3842c239c6255afefd4c35868ba0fa8412c2f8
         @test dual_status(m) == MOI.FEASIBLE_POINT
     end
     # test solve_time
     @testset "JuMP.solve_time" begin
         @test solve_time(m) == 0.42
     end
-<<<<<<< HEAD
-=======
     # test raw_status
     @testset "JuMP.raw_status" begin
         @test raw_status(m) == "solver specific string"
     end
->>>>>>> 4e3842c239c6255afefd4c35868ba0fa8412c2f8
 end
 
 # Test objective queries
@@ -94,23 +87,11 @@ end
 
     mockoptimizer = JuMP.backend(tm).optimizer.model
     MOI.set(mockoptimizer, MOI.TerminationStatus(), MOI.OPTIMAL)
-<<<<<<< HEAD
-    MOI.set(mockoptimizer, MOI.RawStatusString(), "solver specific string")
-=======
->>>>>>> 4e3842c239c6255afefd4c35868ba0fa8412c2f8
     MOI.set(mockoptimizer, MOI.ObjectiveValue(), -1.0)
     MOI.set(mockoptimizer, MOI.ObjectiveBound(), 2.0)
     MOI.set(mockoptimizer, MOI.ResultCount(), 1)
     MOI.set(mockoptimizer, MOI.PrimalStatus(), MOI.FEASIBLE_POINT)
     MOI.set(mockoptimizer, MOI.DualStatus(), MOI.FEASIBLE_POINT)
-<<<<<<< HEAD
-    MOI.set(mockoptimizer, MOI.VariablePrimal(), JuMP.optimizer_index(x), 1.0)
-    MOI.set(mockoptimizer, MOI.VariablePrimal(), JuMP.optimizer_index(y), 0.0)
-    MOI.set(mockoptimizer, MOI.ConstraintDual(), JuMP.optimizer_index(c1), -1.0)
-    MOI.set(mockoptimizer, MOI.SolveTime(), 0.42)
-    # test objective_bound
-=======
->>>>>>> 4e3842c239c6255afefd4c35868ba0fa8412c2f8
     @testset "JuMP.objective_bound" begin
         @test objective_bound(m) == 2.0
     end
@@ -132,50 +113,28 @@ end
     @variable(tm, x)
     @variable(tm, y)
     @objective(tm, Min, x^2)
-<<<<<<< HEAD
-    @constraint(tm, c1, 2 * x * y <= 1)
-=======
     @constraint(tm, c1, x <= 0)
->>>>>>> 4e3842c239c6255afefd4c35868ba0fa8412c2f8
     tm.ext[:TransData].global_to_var[g] = x
     tm.ext[:TransData].infinite_to_vars[inf] = [x, y]
     modelstring = """
     variables: x, y
     minobjective: 1*x*x
-<<<<<<< HEAD
-    c1: 2*x*y <= 1.0
-    """
-    model = MOIU.Model{Float64}()
-    MOIU.loadfromstring!(model, modelstring)
-    MOIU.test_models_equal(JuMP.backend(tm).model_cache, model, ["x","y"], ["c1"])
-=======
     c1: x <= 0.0
     """
     model = MOIU.Model{Float64}()
     MOIU.loadfromstring!(model, modelstring)
     # MOIU.test_models_equal(JuMP.backend(tm).model_cache, model, ["x","y"], ["c1"])
->>>>>>> 4e3842c239c6255afefd4c35868ba0fa8412c2f8
     JuMP.optimize!(tm, with_optimizer(MOIU.MockOptimizer,
                                      MOIU.Model{Float64}(),
                                      eval_objective_value=false))
 
     mockoptimizer = JuMP.backend(tm).optimizer.model
     MOI.set(mockoptimizer, MOI.TerminationStatus(), MOI.OPTIMAL)
-<<<<<<< HEAD
-    MOI.set(mockoptimizer, MOI.RawStatusString(), "solver specific string")
-    MOI.set(mockoptimizer, MOI.ObjectiveValue(), -1.0)
-=======
->>>>>>> 4e3842c239c6255afefd4c35868ba0fa8412c2f8
     MOI.set(mockoptimizer, MOI.ResultCount(), 1)
     MOI.set(mockoptimizer, MOI.PrimalStatus(), MOI.FEASIBLE_POINT)
     MOI.set(mockoptimizer, MOI.DualStatus(), MOI.FEASIBLE_POINT)
     MOI.set(mockoptimizer, MOI.VariablePrimal(), JuMP.optimizer_index(x), 1.0)
     MOI.set(mockoptimizer, MOI.VariablePrimal(), JuMP.optimizer_index(y), 0.0)
-<<<<<<< HEAD
-    MOI.set(mockoptimizer, MOI.ConstraintDual(), JuMP.optimizer_index(c1), -1.0)
-    MOI.set(mockoptimizer, MOI.SolveTime(), 0.42)
-=======
->>>>>>> 4e3842c239c6255afefd4c35868ba0fa8412c2f8
     # test has_values
     @testset "JuMP.has_values" begin
         @test has_values(m)
@@ -185,8 +144,6 @@ end
         @test value(inf) == [1., 0.]
         @test value(g) == 1.
     end
-<<<<<<< HEAD
-=======
     # test optimizer_index
     @testset "JuMP.optimizer_index" begin
         @test isa(optimizer_index(g), MOI.VariableIndex)
@@ -266,5 +223,4 @@ end
         @test shadow_price(c1) == -1.
         @test shadow_price(c2) == [-0., -1.]
     end
->>>>>>> 4e3842c239c6255afefd4c35868ba0fa8412c2f8
 end

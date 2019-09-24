@@ -177,7 +177,7 @@ end
     @global_variable(m, w == 1, Int, start = 1)
     index = m.next_var_index + 1
     m.reduced_info[index] = ReducedInfiniteInfo(y, Dict(1 => 1))
-    yr = ReducedInfiniteVariableRef(m, index)
+    yr = InfOptVariableRef(m, index, Reduced)
     tm = optimizer_model(m)
     @variable(tm, a)
     @variable(tm, b)
@@ -190,7 +190,7 @@ end
     supp1 = convert(JuMPC.SparseAxisArray, [0, 0])
     supp2 = convert(JuMPC.SparseAxisArray, [1, 1])
     # test for FiniteVariableRefs
-    @testset "FiniteVariableRef" begin
+    @testset "Finite Variable References" begin
         # test cannot find
         @test_throws ErrorException IOTO._map_to_variable(x0, (), (), tm)
         @test_throws ErrorException IOTO._map_to_variable(y0, (), (), tm)
@@ -208,7 +208,7 @@ end
         @test IOTO._map_to_variable(w, (), (), tm) == d
     end
     # test for InfiniteVariableRefs
-    @testset "InfiniteVariableRef" begin
+    @testset "Infinite Variable References" begin
         # prepare transcrition model with mapped variables
         tm.ext[:TransData].infinite_to_vars[x] = [a, e]
         tm.ext[:TransData].infinite_to_vars[y] = [b, f, g, h]
@@ -229,7 +229,7 @@ end
         @test IOTO._map_to_variable(y, (1, supp2), (par, pars), tm) == h
     end
     # test for ReducedInfiniteVariableRefs
-    @testset "ReducedInfiniteVariableRef" begin
+    @testset "Reduced Infinite Variable References" begin
         # test cannot find
         supp3 = convert(JuMPC.SparseAxisArray, [0.5, 0.5])
         @test_throws ErrorException IOTO._map_to_variable(yr, (0.5, supp3),
@@ -241,7 +241,7 @@ end
         @test IOTO._map_to_variable(yr, (supp2,), (pars,), tm) == h
     end
     # test for ParameterRefs
-    @testset "ParameterRef" begin
+    @testset "Parameter References" begin
         # test cannot find
         @test_throws ErrorException IOTO._map_to_variable(par, (supp1,),
                                                           (pars,), tm)
@@ -295,7 +295,7 @@ end
     @global_variable(m, w == 1, Int, start = 1)
     m.next_var_index += 1
     m.reduced_info[m.next_var_index] = ReducedInfiniteInfo(y, Dict(1 => 1))
-    yr = ReducedInfiniteVariableRef(m, m.next_var_index)
+    yr = InfOptVariableRef(m, m.next_var_index, Reduced)
     data1 = DiscreteMeasureData(par, [1, 1], [0, 1])
     meas1 = measure(x - w, data1)
     meas2 = measure(y, data1)
@@ -403,7 +403,7 @@ end
     # test General GenericQuadExprs
     @testset "General QuadExpr" begin
         # test only having 1 variable that is finite
-        expr = zero(GenericQuadExpr{Float64, GeneralVariableRef})
+        expr = zero(GenericQuadExpr{Float64, InfOptVariableRef})
         expr.aff = z - 2
         @test IOTO._make_transcription_function(expr, tm)[1] == c - 2
         expr.aff = 2w - w

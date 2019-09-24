@@ -77,7 +77,7 @@ function JuMP.constraints_string(print_mode, model::InfiniteModel)
     params = sort(collect(model.params), by = c -> c.first)
     ignore_groups = [] # used to indicate which groups should no longer be used
     for (index, param) in params
-        pref = ParameterRef(model, index)
+        pref = InfOptVariableRef(model, index, Parameter)
         if is_used(pref) && !(group_id(pref) in ignore_groups)
             if isa(infinite_set(pref), DistributionSet{<:Distributions.MultivariateDistribution})
                 # print multivariate distributions with variables grouped together

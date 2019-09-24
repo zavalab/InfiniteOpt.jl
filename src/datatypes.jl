@@ -550,7 +550,6 @@ end
 function constraint_type(cref::InfOptConstraintRef)::Symbol
     return cref.type
 end
-# Type could be Infinite, Measure, Finite
 
 # Helper functions that check the type of an expression
 function all_types_of_expr(expr::InfOptVariableRef)::Array{Symbol, 1}
@@ -588,12 +587,11 @@ end
 function _is_infinite_expr(expr::JuMP.AbstractJuMPScalar)::Bool
     if expr isa InfOptVariableRef
         return variable_type(expr) == Infinite || variable_type(expr) == Reduced
-    elseif expr isa JuMP.GenericAffExpr{Float64, InfOptVariableRef} ||
-           expr isa JuMP.GenericQuadExpr{Float64, InfOptVariableRef}
-        types_of_expr = all_types_of_expr(expr)
-        return (Reduced in types_of_expr || Infinite in types_of_expr)
+    else
+        return expr isa JuMP.GenericAffExpr{Float64, InfOptVariableRef} ||
+               expr isa JuMP.GenericQuadExpr{Float64, InfOptVariableRef}
     end
-    return false
+    #return false
 end
 
 function _is_measure_expr(expr::JuMP.AbstractJuMPScalar)::Bool
@@ -608,6 +606,7 @@ function _is_measure_expr(expr::JuMP.AbstractJuMPScalar)::Bool
         elseif MeasureRef in types_of_expr
             return true
         end
+#        return MeasureRef in types_of_expr
     end
     return false
 end
@@ -634,22 +633,21 @@ function _is_parameter_expr(expr::JuMP.AbstractJuMPScalar)::Bool
     elseif expr isa JuMP.GenericAffExpr{Float64, InfOptVariableRef} ||
            expr isa JuMP.GenericQuadExpr{Float64, InfOptVariableRef}
         types_of_expr = all_types_of_expr(expr)
-#        return types_of_expr == [Parameter]
-        return Parameter in types_of_expr && !(Infinite in types_of_expr) &&
-               !(Reduced in types_of_expr) && !(Measure in types_of_expr)
+        return types_of_expr == [Parameter]
+#        return Parameter in types_of_expr && !(Infinite in types_of_expr) &&
+#               !(Reduced in types_of_expr) && !(Measure in types_of_expr)
     end
     return false
 end
 
 function _expr_constraint_type(expr::JuMP.AbstractJuMPScalar)::Symbol
-    if !(_is_infinite_expr(expr) && _is_measure_expr(expr) && _is_finite_expr(expr))
-        error("expr is not of any valid InfiniteOpt constraint type.")
-    end
-    if _is_infinite_expr(expr)
-        return Infinite
+    if _is_finite_expr(expr)
+        return Finite
     elseif _is_measure_expr(expr)
         return MeasureRef
-    elseif _is_finite_expr(expr)
-        return Finite
+    elseif _is_infinite_expr(expr)
+        return Infinite
+    else
+        error("expr is not of any valid InfiniteOpt constraint type.")
     end
 end

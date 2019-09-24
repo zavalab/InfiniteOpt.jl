@@ -150,8 +150,9 @@ function transcription_variable end
 ## Define the variable mapping functions
 # function wrapper for transcription_variable
 function transcription_variable(model::JuMP.Model,
-                                vref::InfiniteOpt.InfOptVariableRef)::JuMP.VariableRef
-    return transcription_variable(model, vref, Val(variable_type(vref)))
+                                vref::InfiniteOpt.InfOptVariableRef
+                                )::Union{JuMP.VariableRef, Vector}
+    return transcription_variable(model, vref, Val(InfiniteOpt.variable_type(vref)))
 end
 
 # global Variable refs
@@ -243,8 +244,9 @@ fin_con : x(support: 1) - y <= 3.0
 ## Define the cosntraint mapping functions
 # function wrapper for transcription_constraint
 function transcription_constraint(model::JuMP.Model,
-                                  cref::InfiniteOpt.InfOptConstraintRef)::Vector
-    return transcription_constraint(model, cref, Val(constraint_type(cref)))
+                                  cref::InfiniteOpt.InfOptConstraintRef
+                                  )::Union{JuMP.ConstraintRef, Vector}
+    return transcription_constraint(model, cref, Val(InfiniteOpt.constraint_type(cref)))
 end
 
 # Infinite constraint refs
@@ -287,7 +289,7 @@ not transcribed.
 # function wrapper for InfiniteOpt.supports for constraint refs
 function InfiniteOpt.supports(model::JuMP.Model,
                               cref::InfiniteOpt.InfOptConstraintRef)::Vector
-    return InfiniteOpt.supports(model, cref, Val(constraint_type(cref)))
+    return InfiniteOpt.supports(model, cref, Val(InfiniteOpt.constraint_type(cref)))
 end
 # Infinite constraint refs
 function InfiniteOpt.supports(model::JuMP.Model,
@@ -325,7 +327,7 @@ Dict{Int64,Tuple{Float64}} with 2 entries:
 """
 # function wrapper
 function InfiniteOpt.supports(cref::InfiniteOpt.InfOptConstraintRef)::Vector
-    return InfiniteOpt.supports(cref, Val(constraint_type(cref)))
+    return InfiniteOpt.supports(cref, Val(InfiniteOpt.constraint_type(cref)))
 end
 # Infinite constraint refs
 function InfiniteOpt.supports(cref::InfiniteOpt.InfOptConstraintRef,
@@ -349,7 +351,7 @@ Return the a parameter reference tuple of all the parameters that parameterize
 """
 function InfiniteOpt.parameter_refs(model::JuMP.Model,
                                     cref::InfiniteOpt.InfOptConstraintRef)::Tuple
-    return InfiniteOpt.parameter_refs(model, cref, Val(constraint_type(cref)))
+    return InfiniteOpt.parameter_refs(model, cref, Val(InfiniteOpt.constraint_type(cref)))
 end
 # Infinite constraint refs
 function InfiniteOpt.parameter_refs(model::JuMP.Model,
@@ -387,7 +389,7 @@ julia> parameter_refs(cref)
 """
 # function wrapper
 function InfiniteOpt.parameter_refs(cref::InfiniteOpt.InfOptConstraintRef)::Tuple
-    return InfiniteOpt.parameter_refs(cref, Val(constraint_type(cref)))
+    return InfiniteOpt.parameter_refs(cref, Val(InfiniteOpt.constraint_type(cref)))
 end
 # Infinite constraint refs
 function InfiniteOpt.parameter_refs(cref::InfiniteOpt.InfOptConstraintRef,

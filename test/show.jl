@@ -198,7 +198,7 @@ end
     end
     # test show_objective_function_summary
     @testset "JuMP.show_objective_function_summary" begin
-        str = "Objective function type: GenericAffExpr{Float64,GlobalVariableRef}\n"
+        str = "Objective function type: GenericAffExpr{Float64,InfOptVariableRef}\n"
         io_test(show_objective_function_summary, str, m)
     end
     # test show_constraints_summary
@@ -207,10 +207,10 @@ end
         @test InfiniteOpt._plural(1) == ""
         @test InfiniteOpt._plural(2) == "s"
         # test the main function
-        str = "`GenericAffExpr{Float64,GeneralVariableRef}`-in-`MathOptInter" *
+        str = "`GenericAffExpr{Float64,InfOptVariableRef}`-in-`MathOptInter" *
               "face.LessThan{Float64}`: 1 constraint\n`GenericQuadExpr{" *
-              "Float64,GlobalVariableRef}`-in-`MathOptInterface.EqualTo{" *
-              "Float64}`: 1 constraint\n`GenericAffExpr{Float64,Infinite" *
+              "Float64,InfOptVariableRef}`-in-`MathOptInterface.EqualTo{" *
+              "Float64}`: 1 constraint\n`GenericAffExpr{Float64,InfOpt" *
               "VariableRef}`-in-`MathOptInterface.EqualTo{Float64}`: 1 " *
               "constraint\n"
         io_test(show_constraints_summary, str, m)
@@ -219,11 +219,11 @@ end
     @testset "Base.show (InfiniteModel)" begin
         # test minimization
         str = "An InfiniteOpt Model\nMinimization problem with:\nVariables: " *
-              "3\nObjective function type: GenericAffExpr{Float64,Global" *
-              "VariableRef}\n`GenericAffExpr{Float64,GeneralVariableRef}`-in-" *
+              "3\nObjective function type: GenericAffExpr{Float64,InfOpt" *
+              "VariableRef}\n`GenericAffExpr{Float64,InfOptVariableRef}`-in-" *
               "`MathOptInterface.LessThan{Float64}`: 1 constraint\n`Generic" *
-              "QuadExpr{Float64,GlobalVariableRef}`-in-`MathOptInterface.Equal" *
-              "To{Float64}`: 1 constraint\n`GenericAffExpr{Float64,Infinite" *
+              "QuadExpr{Float64,InfOptVariableRef}`-in-`MathOptInterface.Equal" *
+              "To{Float64}`: 1 constraint\n`GenericAffExpr{Float64,InfOpt" *
               "VariableRef}`-in-`MathOptInterface.EqualTo{Float64}`: 1 " *
               "constraint\nNames registered in the model: c1, c2, c3, par1, " *
               "pars, x, y, z\nOptimizer model backend information: \nModel " *
@@ -233,11 +233,11 @@ end
         # test maximization
         set_objective_sense(m, MOI.MAX_SENSE)
         str = "An InfiniteOpt Model\nMaximization problem with:\nVariables: " *
-              "3\nObjective function type: GenericAffExpr{Float64,Global" *
-              "VariableRef}\n`GenericAffExpr{Float64,GeneralVariableRef}`-in-" *
+              "3\nObjective function type: GenericAffExpr{Float64,InfOpt" *
+              "VariableRef}\n`GenericAffExpr{Float64,InfOptVariableRef}`-in-" *
               "`MathOptInterface.LessThan{Float64}`: 1 constraint\n`Generic" *
-              "QuadExpr{Float64,GlobalVariableRef}`-in-`MathOptInterface.Equal" *
-              "To{Float64}`: 1 constraint\n`GenericAffExpr{Float64,Infinite" *
+              "QuadExpr{Float64,InfOptVariableRef}`-in-`MathOptInterface.Equal" *
+              "To{Float64}`: 1 constraint\n`GenericAffExpr{Float64,InfOpt" *
               "VariableRef}`-in-`MathOptInterface.EqualTo{Float64}`: 1 " *
               "constraint\nNames registered in the model: c1, c2, c3, par1, " *
               "pars, x, y, z\nOptimizer model backend information: \nModel " *
@@ -247,10 +247,10 @@ end
         # test feasibility
         set_objective_sense(m, MOI.FEASIBILITY_SENSE)
         str = "An InfiniteOpt Model\nFeasibility problem with:\nVariables: 3" *
-              "\n`GenericAffExpr{Float64,GeneralVariableRef}`-in-`MathOpt" *
+              "\n`GenericAffExpr{Float64,InfOptVariableRef}`-in-`MathOpt" *
               "Interface.LessThan{Float64}`: 1 constraint\n`GenericQuadExpr{" *
-              "Float64,GlobalVariableRef}`-in-`MathOptInterface.EqualTo{" *
-              "Float64}`: 1 constraint\n`GenericAffExpr{Float64,Infinite" *
+              "Float64,InfOptVariableRef}`-in-`MathOptInterface.EqualTo{" *
+              "Float64}`: 1 constraint\n`GenericAffExpr{Float64,InfOpt" *
               "VariableRef}`-in-`MathOptInterface.EqualTo{Float64}`: 1 " *
               "constraint\nNames registered in the model: c1, c2, c3, par1, " *
               "pars, x, y, z\nOptimizer model backend information: \nModel " *

@@ -385,10 +385,8 @@ end
     @infinite_variable(m, inf(par) >= 0)
     @point_variable(m, inf(0.5), pt)
     @global_variable(m, 0 <= x <= 1, Int)
-    expected = [(Infinite, MOI.GreaterThan{Float64}),
-                (Point, MOI.GreaterThan{Float64}),
-                (Global, MOI.GreaterThan{Float64}),
-                (Global, MOI.LessThan{Float64}),
-                (Global, MOI.Integer)]
+    expected = [(InfOptVariableRef, MOI.GreaterThan{Float64}),
+                (InfOptVariableRef, MOI.LessThan{Float64}),
+                (InfOptVariableRef, MOI.Integer)]
     @test list_of_constraint_types(m) == expected
 end

@@ -499,11 +499,11 @@ Subject to
 """
 function expand_all_measures!(model::InfiniteModel)
     # expand the objective if it contains measures
-    if JuMP.objective_function_type(model) <: MeasureExpr
-        new_obj = _possible_convert(FiniteVariableRef, # change here
+    if _is_measure_expr(JuMP.objective_function(model))
+        new_obj = _possible_convert(InfOptVariableRef,
                          _expand_measures(JuMP.objective_function(model), model,
                                           _add_mapped_point_variable))
-        isa(new_obj, InfiniteExpr) && error("Objective is not finite, ensure " *
+        !_is_finite_expr(new_obj) && error("Objective is not finite, ensure " *
                                             "all infinite variables/parameters " *
                                             "in measures are evaluated " *
                                             "completely.")
@@ -512,7 +512,7 @@ function expand_all_measures!(model::InfiniteModel)
     # expand all of the constraints that contain measures
     for cindex in sort(unique(vcat(values(model.meas_to_constrs)...)))
         # expand the expression
-        new_func = _possible_convert(FiniteVariableRef, # change here
+        new_func = _possible_convert(InfOptVariableRef,
                                  _expand_measures(model.constrs[cindex].func,
                                                   model,
                                                   _add_mapped_point_variable))
@@ -523,8 +523,8 @@ function expand_all_measures!(model::InfiniteModel)
         curr_index = model.next_constr_index
         # delete the old cosntraint and replace it with the expanded version
         model.next_constr_index = cindex - 1
-        if isa(model.constrs[cindex], BoundedScalarConstraint) && isa(new_func,
-                                                                   InfiniteExpr)
+        if isa(model.constrs[cindex], BoundedScalarConstraint) &&
+           _is_infinite_expr(new_func)
             bounds = model.constrs[cindex].bounds
             JuMP.delete(model, cref)
             JuMP.add_constraint(model, JuMP.build_constraint(error, new_func,

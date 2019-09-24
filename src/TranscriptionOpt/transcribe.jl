@@ -62,8 +62,8 @@ function _update_point_mapping(trans_model::JuMP.Model,
                                pvref::InfiniteOpt.InfOptVariableRef,
                                ivref::InfiniteOpt.InfOptVariableRef,
                                support::Tuple)
-    return _update_point_mapping(trans_model, pvref, Val(variable_type(pvref)),
-                                 ivref, Val(variable_type(ivref)), support)
+    return _update_point_mapping(trans_model, pvref, Val(InfiniteOpt.variable_type(pvref)),
+                                 ivref, Val(InfiniteOpt.variable_type(ivref)), support)
 end
 function _update_point_mapping(trans_model::JuMP.Model,
                                pvref::InfiniteOpt.InfOptVariableRef,
@@ -88,7 +88,7 @@ end
 # Override the info of the jump variable with the point variable's if any is provided
 function _update_point_info(trans_model::JuMP.Model,
                             pvref::InfiniteOpt.InfOptVariableRef)
-    return _update_point_info(trans_model, pvref, Val(variable_type(pvref)))
+    return _update_point_info(trans_model, pvref, Val(InfiniteOpt.variable_type(pvref)))
 end
 
 function _update_point_info(trans_model::JuMP.Model,
@@ -148,7 +148,7 @@ end
 # Return the tuple index of a parameter based off of group_id
 function _parameter_tuple_index(pref::InfiniteOpt.InfOptVariableRef,
                                 prefs::Tuple)::Int64
-    return _parameter_tuple_index(pref, Val(variable_type(pref)), prefs)
+    return _parameter_tuple_index(pref, Val(InfiniteOpt.variable_type(pref)), prefs)
 end
 
 function _parameter_tuple_index(pref::InfiniteOpt.InfOptVariableRef,
@@ -166,7 +166,7 @@ end
 # return NaN is the parameter is not contained in prefs
 function _parameter_value(pref::InfiniteOpt.InfOptVariableRef, support::Tuple,
                           prefs::Tuple)::Float64
-    return _parameter_value(pref, Val(variable_type(pref)), support, prefs)
+    return _parameter_value(pref, Val(InfiniteOpt.variable_type(pref)), support, prefs)
 end
 
 function _parameter_value(pref::InfiniteOpt.InfOptVariableRef,
@@ -175,7 +175,8 @@ function _parameter_value(pref::InfiniteOpt.InfOptVariableRef,
     pref_index = _parameter_tuple_index(pref, prefs)
     if pref_index == -1
         return NaN
-    elseif variable_type(prefs[pref_index]) == InfiniteOpt.Parameter
+    elseif isa(prefs[pref_index], InfiniteOpt.InfOptVariableRef) &&
+           InfiniteOpt.variable_type(prefs[pref_index]) == InfiniteOpt.Parameter
         return support[pref_index]
     else
         for (k, v) in prefs[pref_index].data
@@ -190,8 +191,9 @@ end
 ## Helper function for mapping InfiniteOpt variables to jump variables
 # function wrapper for _map_to_variable
 function _map_to_variable(fvref::InfiniteOpt.InfOptVariableRef, support::Tuple,
-                          prefs::Tuple, trans_model::JuMP.Model)::JuMP.VariableRef
-    return _map_to_variable(fvref, Val(variable_type(fvref)), support, prefs, trans_model)
+                          prefs::Tuple, trans_model::JuMP.Model
+                          )::Union{Float64, JuMP.VariableRef}
+    return _map_to_variable(fvref, Val(InfiniteOpt.variable_type(fvref)), support, prefs, trans_model)
 end
 # FiniteVariableRef
 function _map_to_variable(fvref::InfiniteOpt.InfOptVariableRef,
@@ -203,8 +205,9 @@ end
 
 # InfiniteVariableRef
 function _map_to_variable(ivref::InfiniteOpt.InfOptVariableRef,
-                          ::Val{InfiniteOpt.InfOptVariableRef}, support::Tuple,
-                          prefs::Tuple, trans_model::JuMP.Model)::JuMP.VariableRef
+                          ::Val{InfiniteOpt.Infinite},
+                          support::Tuple, prefs::Tuple,
+                          trans_model::JuMP.Model)::JuMP.VariableRef
     # reduce support to only include the relavent parameter id groups
     ivref_groups = InfiniteOpt._group.(InfiniteOpt.parameter_refs(ivref))
     support_groups = InfiniteOpt._group.(prefs)
@@ -281,7 +284,7 @@ end
 function _make_transcription_function(vref::InfiniteOpt.InfOptVariableRef,
                                       trans_model::JuMP.Model,
                                       bounds::Dict = Dict())::Tuple
-    return _make_transcription_function(vref, Val(variable_type(vref)),
+    return _make_transcription_function(vref, Val(InfiniteOpt.variable_type(vref)),
                                         trans_model, bounds)
 end
 # PointVariableRef and GlobalVariableRef --> return scalar jump object
@@ -348,7 +351,7 @@ function _make_transcription_function(expr::Union{JuMP.GenericAffExpr,
                                                   JuMP.GenericQuadExpr},
                                       trans_model::JuMP.Model,
                                       bounds::Dict = Dict())::Tuple
-    constr_type = _expr_constraint_type(expr)
+    constr_type = InfiniteOpt._expr_constraint_type(expr)
     return _make_transcription_function(expr, Val(constr_type), trans_model, bounds)
 end
 
@@ -371,6 +374,9 @@ function _make_transcription_function(expr::JuMP.GenericQuadExpr{C,
                                       ::Val{InfiniteOpt.Finite},
                                       trans_model::JuMP.Model,
                                       bounds::Dict = Dict())::Tuple where {C}
+    if length(expr.terms) == 0
+        return _make_transcription_function(expr.aff, trans_model)
+    end
     # replace finite vars with jump vars
     pairs = Vector{Pair{JuMP.UnorderedPair{JuMP.VariableRef}, C}}(undef,
                                                              length(expr.terms))
@@ -409,7 +415,7 @@ function _make_transcription_function(expr::JuMP.GenericAffExpr{C,
     # TODO rework paradigm so expressions don't need to be checked for measures
     has_measure = false
     for var in keys(expr.terms)
-        if var isa InfiniteOpt.MeasureRef
+        if InfiniteOpt.variable_type(var) == MeasureRef
             has_measure = true
             break
         end
@@ -471,7 +477,7 @@ function _make_transcription_function(expr::JuMP.GenericQuadExpr{C,
     all_variables = InfiniteOpt._all_function_variables(expr)
     has_measure = false
     for var in all_variables
-        if var isa InfiniteOpt.MeasureRef
+        if InfiniteOpt.variable_type(var) == InfiniteOpt.MeasureRef
             has_measure = true
             break
         end
@@ -567,8 +573,8 @@ end
 
 ## Define helper functions for setting constraint mappings
 function _set_mapping(cref::InfiniteOpt.InfOptConstraintRef,
-                      crefs::Vector{<:JuMP.ConstraintRef})
-    cref_type = constraint_type(cref)
+                      crefs::Union{JuMP.ConstraintRef, Vector{<:JuMP.ConstraintRef}})
+    cref_type = InfiniteOpt.constraint_type(cref)
     _set_mapping(cref, Val(cref_type), crefs)
     return
 end
@@ -610,7 +616,7 @@ end
 function _set_supports(trans_model::JuMP.Model,
                        cref::InfiniteOpt.InfOptConstraintRef,
                        supports::Vector)
-    cref_type = constraint_type(cref)
+    cref_type = InfiniteOpt.constraint_type(cref)
     _set_supports(trans_model, cref, Val(cref_type), supports)
     return
 end
@@ -637,7 +643,7 @@ end
 function _set_parameter_refs(trans_model::JuMP.Model,
                              cref::InfiniteOpt.InfOptConstraintRef,
                              prefs::Tuple)
-    cref_type = constraint_type(cref)
+    cref_type = InfiniteOpt.constraint_type(cref)
     _set_parameter_refs(trans_model, cref, Val(cref_type), prefs)
     return
 end
@@ -719,7 +725,7 @@ end
 ## Helper functions for mapping InfiniteOpt var info constrs to the transcribed ones
 function _map_info_constraints(vref::InfiniteOpt.InfOptVariableRef,
                                trans_model::JuMP.Model)
-    _map_info_constraints(vref, Val(variable_type(vref)), trans_model)
+    _map_info_constraints(vref, Val(InfiniteOpt.variable_type(vref)), trans_model)
     return
 end
 

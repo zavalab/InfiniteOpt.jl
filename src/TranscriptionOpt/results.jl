@@ -7,8 +7,8 @@ model to `vref`.
 """
 function InfiniteOpt.map_value(vref::InfiniteOpt.InfOptVariableRef,
                                key::Val{:TransData})
-    trans_model = InfiniteOpt.optimizer_model(JuMP.owner_model(ivref))
-    return JuMP.value.(transcription_variable(trans_model, ivref))
+    trans_model = InfiniteOpt.optimizer_model(JuMP.owner_model(vref))
+    return JuMP.value.(transcription_variable(trans_model, vref))
 end
 
 """
@@ -59,8 +59,8 @@ transcription model to `cref`.
 """
 function InfiniteOpt.map_dual(ccref::InfiniteOpt.InfOptConstraintRef,
                               key::Val{:TransData})
-    trans_model = InfiniteOpt.optimizer_model(JuMP.owner_model(icref))
-    return JuMP.dual.(transcription_constraint(trans_model, icref))
+    trans_model = InfiniteOpt.optimizer_model(JuMP.owner_model(ccref))
+    return JuMP.dual.(transcription_constraint(trans_model, ccref))
 end
 
 """

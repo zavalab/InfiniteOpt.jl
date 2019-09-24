@@ -42,7 +42,7 @@ end
     @variable(tm, a)
     @variable(tm, b)
     @variable(tm, c)
-    # test transcription_variable (GlobalVariableRef)
+    # test transcription_variable (Global)
     @testset "transcription_variable (Global)" begin
         # test error
         @test_throws ErrorException transcription_variable(tm, y)
@@ -50,7 +50,7 @@ end
         tm.ext[:TransData].global_to_var[y] = a
         @test transcription_variable(tm, y) == a
     end
-    # test transcription_variable (InfiniteVariableRef)
+    # test transcription_variable (Infinite)
     @testset "transcription_variable (Infinite)" begin
         # test error
         @test_throws ErrorException transcription_variable(tm, x)
@@ -58,7 +58,7 @@ end
         tm.ext[:TransData].infinite_to_vars[x] = [b, c]
         @test transcription_variable(tm, x) == [b, c]
     end
-    # test transcription_variable (PointVariableRef)
+    # test transcription_variable (Point)
     @testset "transcription_variable (Point)" begin
         # test error
         @test_throws ErrorException transcription_variable(tm, x0)

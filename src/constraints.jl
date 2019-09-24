@@ -190,12 +190,12 @@ function JuMP.add_constraint(model::InfiniteModel, c::JuMP.AbstractConstraint,
     if length(vrefs) != 0
         _update_var_constr_mapping(vrefs, index)
     end
-    if _is_infinite_expr(c.func)
-        cref = InfOptConstraintRef(model, index, JuMP.shape(c), Infinite)
+    if _is_finite_expr(c.func)
+        cref = InfOptConstraintRef(model, index, JuMP.shape(c), Finite)
     elseif _is_measure_expr(c.func)
         cref = InfOptConstraintRef(model, index, JuMP.shape(c), MeasureRef)
     else
-        cref = InfOptConstraintRef(model, index, JuMP.shape(c), Finite)
+        cref = InfOptConstraintRef(model, index, JuMP.shape(c), Infinite)
     end
     model.constrs[index] = c
     JuMP.set_name(cref, name)
@@ -459,6 +459,7 @@ end
 # Return the appropriate constraint reference given the index and model
 function _make_constraint_ref(model::InfiniteModel,
                               index::Int64)::InfOptConstraintRef
+#=
     if _is_infinite_expr(model.constrs[index].func)
         return InfOptConstraintRef(model, index,
                                     JuMP.shape(model.constrs[index]), Infinite)
@@ -468,6 +469,17 @@ function _make_constraint_ref(model::InfiniteModel,
     else
         return InfOptConstraintRef(model, index,
                                     JuMP.shape(model.constrs[index]), Finite)
+    end
+=#
+    if _is_finite_expr(model.constrs[index].func)
+        return InfOptConstraintRef(model, index,
+                                    JuMP.shape(model.constrs[index]), Finite)
+    elseif _is_measure_expr(model.constrs[index].func)
+        return InfOptConstraintRef(model, index,
+                                    JuMP.shape(model.constrs[index]), MeasureRef)
+    else
+        return InfOptConstraintRef(model, index,
+                                    JuMP.shape(model.constrs[index]), Infinite)
     end
 end
 
@@ -632,7 +644,7 @@ function JuMP.all_constraints(model::InfiniteModel, function_type::Symbol,
     end
     for index in indexes
         if isa(model.constrs[index].func, InfOptVariableRef) &&
-           variable_type(model.constrs[index].func) in function_type && 
+           variable_type(model.constrs[index].func) in function_type &&
            isa(model.constrs[index].set, set_type)
             constr_list[counter] = _make_constraint_ref(model, index)
             counter += 1
@@ -730,21 +742,21 @@ contain all the used combinations of function types and set types in the model.
 
 ```julia
 julia> all_constraints(model)
-5-element Array{Tuple{Symbol,DataType},1}:
- (Global, MathOptInterface.LessThan{Float64})
- (Point, MathOptInterface.GreaterThan{Float64})
- (Global, MathOptInterface.GreaterThan{Float64})
- (Global, MathOptInterface.Integer)
- (Infinite, MathOptInterface.GreaterThan{Float64})
+5-element Array{Tuple{DataType,DataType},1}:
+ (InfOptVariableRef, MathOptInterface.LessThan{Float64})
+ (InfOptVariableRef, MathOptInterface.GreaterThan{Float64})
+ (InfOptVariableRef, MathOptInterface.GreaterThan{Float64})
+ (InfOptVariableRef, MathOptInterface.Integer)
+ (InfOptVariableRef, MathOptInterface.GreaterThan{Float64})
 ```
 """
 function JuMP.list_of_constraint_types(model::InfiniteModel)::Vector{Tuple}
-    type_list = Vector{Tuple{Symbol, DataType}}(undef,
+    type_list = Vector{Tuple{DataType, DataType}}(undef,
                                                   JuMP.num_constraints(model))
     indexes = sort(collect(keys(model.constrs)))
     counter = 1
     for index in indexes
-        type_list[counter] = (variable_type(model.constrs[index].func),
+        type_list[counter] = (typeof(model.constrs[index].func),
                               typeof(model.constrs[index].set))
         counter += 1
     end
