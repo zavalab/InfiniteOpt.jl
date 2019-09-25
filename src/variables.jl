@@ -485,7 +485,7 @@ Solver name: No optimizer attached.
 JuMP.owner_model(vref::InfOptVariableRef)::InfiniteModel = vref.model
 
 """
-    JuMP.index(v::InfOptVariableRef)::Int
+    JuMP.index(v::InfOptVariableRef)::Int64
 
 Extent [`JuMP.index`](@ref) to return the index of a `InfiniteOpt` variable.
 
@@ -704,7 +704,7 @@ function JuMP.is_valid(model::InfiniteModel, vref::InfOptVariableRef,
 end
 
 """
-    JuMP.num_variables(model::InfiniteModel)::Int
+    JuMP.num_variables(model::InfiniteModel)::Int64
 
 Extend [`JuMP.num_variables`](@ref) to return the number of `InfiniteOpt`
 variables assigned to `model`.
@@ -715,7 +715,7 @@ julia> num_variables(model)
 3
 ```
 """
-JuMP.num_variables(model::InfiniteModel)::Int = length(model.vars)
+JuMP.num_variables(model::InfiniteModel)::Int64 = length(model.vars)
 
 # Include all the extension functions for manipulating the properties associated
 # with VariableInfo
@@ -933,7 +933,7 @@ function add_parameter_ref(vref::InfOptVariableRef, ::Val{Infinite},
 end
 
 # Make a variable reference
-function _make_variable_ref(model::InfiniteModel, index::Int)::InfOptVariableRef
+function _make_variable_ref(model::InfiniteModel, index::Int64)::InfOptVariableRef
     if isa(model.vars[index], InfiniteVariable)
         return InfOptVariableRef(model, index, Infinite)
     elseif isa(model.vars[index], PointVariable)

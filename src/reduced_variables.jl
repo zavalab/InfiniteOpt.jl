@@ -110,11 +110,11 @@ end
 # Extend to return the index of the lower bound constraint associated with the
 # original infinite variable of `vref`.
 #=
-function JuMP._lower_bound_index(vref::InfOptVariableRef)::Int
+function JuMP._lower_bound_index(vref::InfOptVariableRef)::Int64
     return JuMP._lower_bound_index(vref, Val(variable_type(vref)))
 end
 
-function JuMP._lower_bound_index(vref::InfOptVariableRef, ::Val{Reduced})::Int
+function JuMP._lower_bound_index(vref::InfOptVariableRef, ::Val{Reduced})::Int64
     if !JuMP.has_lower_bound(vref)
         error("Variable $(vref) does not have a lower bound.")
     end
@@ -181,7 +181,7 @@ function JuMP.fix_value(vref::InfOptVariableRef, ::Val{Reduced})::Float64
 end
 
 # JuMP._fix_index for reduced variable refs
-function JuMP._fix_index(vref::InfOptVariableRef, ::Val{Reduced})::Int
+function JuMP._fix_index(vref::InfOptVariableRef, ::Val{Reduced})::Int64
     if !JuMP.is_fixed(vref)
         error("Variable $(vref) is not fixed.")
     end
@@ -229,7 +229,7 @@ function JuMP.is_binary(vref::InfOptVariableRef, ::Val{Reduced})::Bool
 end
 
 # JuMP._binary_index for reduced variable refs
-function JuMP._binary_index(vref::InfOptVariableRef, ::Val{Reduced})::Int
+function JuMP._binary_index(vref::InfOptVariableRef, ::Val{Reduced})::Int64
     if !JuMP.is_binary(vref)
         error("Variable $(vref) is not binary.")
     end
@@ -263,7 +263,7 @@ function JuMP.is_integer(vref::InfOptVariableRef, ::Val{Reduced})::Bool
 end
 
 # JuMP._integer_index for reduced variable refs
-function JuMP._integer_index(vref::InfOptVariableRef, ::Val{Reduced})::Int
+function JuMP._integer_index(vref::InfOptVariableRef, ::Val{Reduced})::Int64
     if !JuMP.is_integer(vref)
         error("Variable $(vref) is not an integer.")
     end

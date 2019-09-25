@@ -24,7 +24,7 @@ end
 # Used to update the model.var_to_meas and model.param_tomes fields
 # this is needed to update measures if variables are deleted
 function _update_var_meas_mapping(vrefs::Vector{InfOptVariableRef},
-                                  mindex::Int)
+                                  mindex::Int64)
     for vref in vrefs
         model = JuMP.owner_model(vref)
         if isa(Val(variable_type(vref)), Variables)
@@ -61,7 +61,7 @@ end
 # DiscreteMeasureData
 function _update_param_data_mapping(model::InfiniteModel,
                                     data::DiscreteMeasureData,
-                                    mindex::Int)
+                                    mindex::Int64)
     if haskey(model.param_to_meas, JuMP.index(data.parameter_ref))
         if !(mindex in model.param_to_meas[JuMP.index(data.parameter_ref)])
             push!(model.param_to_meas[JuMP.index(data.parameter_ref)], mindex)
@@ -75,7 +75,7 @@ end
 # MultiDiscreteMeasureData
 function _update_param_data_mapping(model::InfiniteModel,
                                     data::MultiDiscreteMeasureData,
-                                    mindex::Int)
+                                    mindex::Int64)
     for pref in data.parameter_ref
         if haskey(model.param_to_meas, JuMP.index(pref))
             if !(mindex in model.param_to_meas[JuMP.index(pref)])
@@ -90,7 +90,7 @@ end
 
 # Fallback
 function _update_param_data_mapping(model::InfiniteModel, data::T,
-                                    mindex::Int) where {T <: AbstractMeasureData}
+                                    mindex::Int64) where {T <: AbstractMeasureData}
     @warn "Unable to map parameter dependence for measure data type $T. " *
           "Parameter deletion methods should not be used."
     return

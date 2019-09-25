@@ -173,7 +173,7 @@ function JuMP._upper_bound_index(vref::InfOptVariableRef)::Int64
 end
 
 # Extend to specify the index `cindex` of a upper bound constraint for `vref`
-function _set_upper_bound_index(vref::InfOptVariableRef, cindex::Int)
+function _set_upper_bound_index(vref::InfOptVariableRef, cindex::Int64)
     JuMP.owner_model(vref).var_to_upper_bound[JuMP.index(vref)] = cindex
     return
 end
@@ -312,7 +312,7 @@ function JuMP._fix_index(vref::InfOptVariableRef)::Int64
 end
 
 # Extend to set the index of the fix constraintassociated with `vref`.
-function _set_fix_index(vref::InfOptVariableRef, cindex::Int)
+function _set_fix_index(vref::InfOptVariableRef, cindex::Int64)
     JuMP.owner_model(vref).var_to_fix[JuMP.index(vref)] = cindex
     return
 end
@@ -619,12 +619,12 @@ JuMP.is_integer(vref::InfOptVariableRef, ::Val{})::Bool = _variable_info(vref).i
 # infinite variable or the original infinite variable of a reduced variable ref.
 
 # function wrapper for extension of JuMP._integer_index
-function JuMP._integer_index(vref::InfOptVariableRef)::Int
+function JuMP._integer_index(vref::InfOptVariableRef)::Int64
     return JuMP._integer_index(vref, Val(variable_type(vref)))
 end
 
 # JuMP._integer_index for infinite variable refs
-function JuMP._integer_index(vref::InfOptVariableRef, ::Val{})::Int
+function JuMP._integer_index(vref::InfOptVariableRef, ::Val{})::Int64
     if !JuMP.is_integer(vref)
         error("Variable $(vref) is not an integer.")
     end
@@ -632,7 +632,7 @@ function JuMP._integer_index(vref::InfOptVariableRef, ::Val{})::Int
 end
 
 # Extend to specify the index of the integer constraint associated with `vref`.
-function _set_integer_index(vref::InfOptVariableRef, cindex::Int)
+function _set_integer_index(vref::InfOptVariableRef, cindex::Int64)
     JuMP.owner_model(vref).var_to_integrality[JuMP.index(vref)] = cindex
     return
 end

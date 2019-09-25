@@ -500,7 +500,7 @@ constr_name : x + pt == 3.0
 function JuMP.constraint_by_name(model::InfiniteModel, name::String)
     if model.name_to_constr === nothing
         # Inspired from MOI/src/Utilities/model.jl
-        model.name_to_constr = Dict{String, Int}()
+        model.name_to_constr = Dict{String, Int64}()
         for (constr, constr_name) in model.constr_to_name
             if haskey(model.name_to_constr, constr_name)
                 # -1 is a special value that means this string does not map to

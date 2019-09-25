@@ -7,7 +7,7 @@ end
 
 ## Helper function for making place holder infinite variables
 # first time reduction
-function _make_reduced_variable(ivref::InfOptVariableRef, removed_index::Int,
+function _make_reduced_variable(ivref::InfOptVariableRef, removed_index::Int64,
                                 support::Union{Number,
                                 JuMPC.SparseAxisArray{<:Number}}
                                 )::InfOptVariableRef
