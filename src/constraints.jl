@@ -178,7 +178,8 @@ function JuMP.add_constraint(model::InfiniteModel, c::JuMP.AbstractConstraint,
                              name::String = "")
     isa(c, JuMP.VectorConstraint) && error("Vector constraints not supported.")
     JuMP.check_belongs_to_model(c.func, model)
-    if all_types_of_expr(c.func) == [Parameter]
+#    if all_types_of_expr(c.func) == [Parameter]
+    if _is_parameter_expr(c.func)
         error("Constraints cannot contain only parameters.")
     end
     vrefs = _all_function_variables(c.func)

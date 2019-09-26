@@ -2,7 +2,7 @@
 
 using Revise, JuMP, InfiniteOpt, Distributions
 
-space_sets = [IntervalSet(-1, 1) for i = 1:3]
+space_sets = [IntervalSet(-1, 1) for i = 1:6]
 
 dist = Normal()
 samples = rand(dist, 2)
@@ -10,7 +10,7 @@ samples = rand(dist, 2)
 m = InfiniteModel()
 
 @infinite_parameter(m, 0 <= t <= 6, supports = [0, 3])
-x = @infinite_parameter(m, [i = 1:3], set = space_sets[i], base_name = "x", independent = true)
+x = @infinite_parameter(m, [i = 1:6], set = space_sets[i], base_name = "x", independent = true)
 @infinite_parameter(m, xi in dist, supports = samples)
 
 add_supports(t, 6)
@@ -25,7 +25,7 @@ end
 @infinite_variable(m, -10 <= w(xi) <= 10)
 q = @infinite_variable(m, parameter_refs = (t, x, xi))
 
-@point_variable(m, T(6, [-1, -1, -1]), Tf == 1)
+@point_variable(m, T(6, -ones(Int64,6)), Tf == 1)
 
 @global_variable(m, 0 <= z <= 42)
 
@@ -44,4 +44,4 @@ expr = @expression(m, measure(2w + measure(measure(q + T, tdata), xdata), rdata)
 print(m)
 println("")
 
-# mt = TranscriptionModel(m);
+#mt = TranscriptionModel(m);

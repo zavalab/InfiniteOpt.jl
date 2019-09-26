@@ -109,7 +109,7 @@ model an optmization problem with an infinite dimensional decision space.
 - `param_to_vars::Dict{Int64, Vector{Int64}}` Infinite parameter indices to list
                                           of dependent variable indices.
 - `next_var_index::Int64` Index - 1 of next variable index.
-- `vars::Dict{Int64, Dict{Int64, Union{InfOptVariable, ReducedVariable}}` Variable
+- `vars::Dict{Int64, Dict{Int64, Union{InfOptVariable, ReducedVariable}}}` Variable
                                                   indices to variable datatype.
 - `var_to_name::Dict{Int64, String}` Variable indices to names.
 - `name_to_var::Union{Dict{String, Int64}, Nothing}` Variable names to indices.
@@ -364,7 +364,6 @@ A DataType for storing reduced infinite variable information.
   The original parameter tuple indices to the evaluation supports.
 """
 struct ReducedInfiniteInfo <: AbstractReducedInfo
-#    infinite_variable_ref::InfiniteVariableRef
     infinite_variable_ref::InfOptVariableRef
     eval_supports::Dict{Int64, Union{Number,
                                    JuMPC.SparseAxisArray{<:Number}}}
@@ -557,14 +556,16 @@ function all_types_of_expr(expr::InfOptVariableRef)::Array{Symbol, 1}
 end
 
 function all_types_of_expr(expr::JuMP.GenericAffExpr)::Array{Symbol, 1}
-    return unique(variable_type.(expr.terms.keys))
+#    return unique(variable_type.(expr.terms.keys))
+    return variable_type.(expr.terms.keys)
 end
 
 function all_types_of_expr(expr::JuMP.GenericQuadExpr)::Array{Symbol, 1}
     types = all_types_of_expr(expr.aff)
     types = cat(types, [variable_type(i.a) for i in expr.terms.keys],
                        [variable_type(i.b) for i in expr.terms.keys], dims = 1)
-    return unique(types)
+#    return unique(types)
+    return types
 end
 
 function all_types_of_expr(expr::JuMP.VariableRef)::Array{Symbol, 1}
@@ -633,9 +634,10 @@ function _is_parameter_expr(expr::JuMP.AbstractJuMPScalar)::Bool
     elseif expr isa JuMP.GenericAffExpr{Float64, InfOptVariableRef} ||
            expr isa JuMP.GenericQuadExpr{Float64, InfOptVariableRef}
         types_of_expr = all_types_of_expr(expr)
-        return types_of_expr == [Parameter]
-#        return Parameter in types_of_expr && !(Infinite in types_of_expr) &&
-#               !(Reduced in types_of_expr) && !(Measure in types_of_expr)
+#        return types_of_expr == [Parameter]
+        return Parameter in types_of_expr && !(Infinite in types_of_expr) &&
+               !(Reduced in types_of_expr) && !(MeasureRef in types_of_expr) &&
+               !(Global in types_of_expr) && !(Point in types_of_expr)
     end
     return false
 end
